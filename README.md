@@ -1,46 +1,141 @@
-# Getting Started with Create React App
+# Portail Administratif Scolaire
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+## Description
+Application web React pour la gestion d'un établissement scolaire avec trois types d'utilisateurs :
+- **Administrateur** : Gestion complète (élèves, enseignants, classes, matières, notes)
+- **Enseignant** : Saisie des notes et génération des bulletins
+- **Parent** : Consultation des bulletins de leurs enfants
 
-## Available Scripts
+## Fonctionnalités
 
-In the project directory, you can run:
+### Module Administrateur
+- ✅ Gestion des élèves (inscription, affectation)
+- ✅ Gestion des enseignants (création, affectation matières/classes)
+- ✅ Gestion des classes (création, niveaux)
+- ✅ Gestion des matières (création, coefficients)
+- ✅ Tableau de bord avec statistiques
+- ✅ Génération et consultation des bulletins
 
-### `npm start`
+### Module Enseignant
+- ✅ Saisie des notes par matière et classe
+- ✅ Génération des bulletins
+- ✅ Consultation des bulletins générés
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+### Module Parent
+- ✅ Consultation des bulletins de leurs enfants
+- ✅ Téléchargement des bulletins en PDF (simulation)
+- ✅ Accès sécurisé aux données
 
-The page will reload if you make edits.\
-You will also see any lint errors in the console.
+## Installation et démarrage
 
-### `npm test`
+### Prérequis
+- Node.js (version 14 ou supérieure)
+- npm ou yarn
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Installation
+```bash
+# Se rendre dans le dossier du projet
+cd frontend-ecole
 
-### `npm run build`
+# Installer les dépendances
+npm install
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+# Démarrer l'application en mode développement
+npm start
+```
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+L'application sera accessible sur `http://localhost:3000`
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+## Comptes de test
 
-### `npm run eject`
+### Administrateur
+- **Email** : admin@ecole.com
+- **Mot de passe** : password
+- **Accès** : Toutes les fonctionnalités
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+### Enseignant
+- **Email** : prof@ecole.com  
+- **Mot de passe** : password
+- **Accès** : Saisie notes, bulletins
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Parent
+- **Email** : parent@ecole.com
+- **Mot de passe** : password
+- **Accès** : Consultation bulletins enfants
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+## Structure du projet
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+```
+src/
+├── components/          # Composants réutilisables
+│   ├── Login.js        # Page de connexion
+│   ├── Navbar.js       # Barre de navigation
+│   ├── Sidebar.js      # Menu latéral
+│   └── MainLayout.js   # Layout principal
+├── pages/              # Pages de l'application
+│   ├── Dashboard.js    # Tableau de bord
+│   ├── GestionEleves.js
+│   ├── GestionEnseignants.js
+│   ├── GestionClasses.js
+│   ├── GestionMatieres.js
+│   ├── SaisieNotes.js
+│   ├── Bulletins.js
+│   └── BulletinsParent.js
+├── context/            # Contextes React
+│   └── AuthContext.js  # Gestion de l'authentification
+├── services/           # Services API
+│   └── apiService.js   # API simulée avec données mock
+├── utils/              # Utilitaires
+│   └── mockData.js     # Données de test
+├── App.js             # Composant principal
+└── index.js           # Point d'entrée
+```
 
-## Learn More
+## Technologies utilisées
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+- **React 18** - Framework frontend
+- **React Context** - Gestion d'état global
+- **CSS-in-JS** - Styling des composants
+- **Données Mock** - Simulation API backend
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+## Fonctionnalités avancées (à implémenter)
+
+- [ ] Intégration avec API Laravel backend
+- [ ] Génération PDF réelle des bulletins
+- [ ] Système de notifications par email
+- [ ] Upload de documents justificatifs
+- [ ] Calculs automatiques des moyennes et mentions
+- [ ] Export Excel des données
+- [ ] Système de réclamations/tickets
+- [ ] Gestion des frais bancaires
+
+## Notes de développement
+
+- L'application utilise actuellement des **données mock** pour simuler les appels API
+- Les téléchargements PDF sont simulés (alertes)
+- L'authentification est basique (à remplacer par JWT)
+- Tous les styles sont inline pour éviter les dépendances CSS externes
+
+## Pour la production
+
+1. Configurer les vraies URLs d'API dans `apiService.js`
+2. Implémenter l'authentification JWT
+3. Ajouter la gestion d'erreurs avancée
+4. Optimiser les performances avec React.memo
+5. Ajouter les tests unitaires
+6. Configurer le build de production
+
+```bash
+npm run build
+```
+
+## Support
+
+Pour toute question ou problème :
+- Vérifier la console navigateur pour les erreurs
+- S'assurer que tous les packages sont installés
+- Vérifier la compatibilité Node.js
+
+---
+
+**Développé pour le projet étudiant ISI - Portail Scolaire 2025**
