@@ -2,6 +2,7 @@ import React from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './components/Login';
 import MainLayout from './components/MainLayout';
+import './styles/designSystem';
 
 const AppContent = () => {
   const { user, loading } = useAuth();

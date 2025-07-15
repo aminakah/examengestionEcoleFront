@@ -270,8 +270,10 @@ const GestionEleves = () => {
 
 const styles = {
   container: {
-    padding: '20px',
-    maxWidth: '1200px'
+    padding: '2rem',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'relative'
   },
   header: {
     display: 'flex',
@@ -280,23 +282,31 @@ const styles = {
     marginBottom: '30px'
   },
   addButton: {
-    backgroundColor: '#28a745',
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     color: 'white',
     border: 'none',
-    padding: '10px 20px',
-    borderRadius: '4px',
-    cursor: 'pointer'
+    padding: '0.875rem 2rem',
+    borderRadius: '1rem',
+    cursor: 'pointer',
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
   },  loading: {
     textAlign: 'center',
     padding: '50px',
     fontSize: '18px'
   },
   formContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '30px'
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    borderRadius: '1.5rem',
+    padding: '2.5rem',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    marginBottom: '2rem',
+    position: 'relative',
+    overflow: 'hidden'
   },
   form: {
     display: 'flex',
@@ -318,10 +328,15 @@ const styles = {
     color: '#333'
   },
   input: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
+    width: '100%',
+    padding: '0.875rem 1rem',
+    border: '2px solid rgba(226, 232, 240, 0.8)',
+    borderRadius: '0.75rem',
+    fontSize: '0.875rem',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    background: 'rgba(255, 255, 255, 0.9)',
+    backdropFilter: 'blur(10px)',
+    outline: 'none'
   },
   textarea: {
     padding: '10px',
@@ -331,20 +346,26 @@ const styles = {
     minHeight: '80px',
     resize: 'vertical'
   },  submitButton: {
-    backgroundColor: '#007bff',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
     color: 'white',
     border: 'none',
-    padding: '12px 24px',
-    borderRadius: '4px',
+    padding: '1rem 2.5rem',
+    borderRadius: '1rem',
     cursor: 'pointer',
-    fontSize: '16px',
+    fontSize: '1rem',
+    fontWeight: '600',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
     alignSelf: 'flex-start'
   },
   tableContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    borderRadius: '1.5rem',
+    overflow: 'hidden',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    padding: '2rem'
   },
   noData: {
     textAlign: 'center',

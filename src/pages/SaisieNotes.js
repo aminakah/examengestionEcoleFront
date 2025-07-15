@@ -221,12 +221,21 @@ const SaisieNotes = () => {
 
 const styles = {
   container: {
-    padding: '20px',
-    maxWidth: '1200px'
+    padding: '2rem',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'relative'
   },
   title: {
-    marginBottom: '30px',
-    color: '#333'
+    fontSize: '2.5rem',
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: '2rem',
+    textAlign: 'center',
+    background: 'linear-gradient(45deg, #ffffff, #e0e7ff)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text'
   },
   loading: {
     textAlign: 'center',
@@ -235,12 +244,14 @@ const styles = {
   },
   filtersContainer: {
     display: 'flex',
-    gap: '20px',
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '30px'
+    gap: '1.5rem',
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    padding: '2rem',
+    borderRadius: '1.5rem',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)',
+    marginBottom: '2rem'
   },
   filterGroup: {
     flex: 1,
@@ -253,15 +264,22 @@ const styles = {
     color: '#333'
   },
   select: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
+    padding: '0.875rem 1rem',
+    border: '2px solid rgba(226, 232, 240, 0.8)',
+    borderRadius: '0.75rem',
+    fontSize: '0.875rem',
+    background: 'rgba(255, 255, 255, 0.9)',
+    backdropFilter: 'blur(10px)',
+    cursor: 'pointer',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    outline: 'none'
   },  notesContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    padding: '2.5rem',
+    borderRadius: '1.5rem',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
   },
   tableContainer: {
     marginTop: '20px',
@@ -299,13 +317,16 @@ const styles = {
     textAlign: 'center'
   },
   submitButton: {
-    backgroundColor: '#28a745',
+    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
     color: 'white',
     border: 'none',
-    padding: '12px 30px',
-    borderRadius: '4px',
+    padding: '1rem 2.5rem',
+    borderRadius: '1rem',
     cursor: 'pointer',
-    fontSize: '16px'
+    fontSize: '1rem',
+    fontWeight: '600',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
   },  noData: {
     textAlign: 'center',
     color: '#666',

@@ -122,12 +122,21 @@ const BulletinsParent = () => {
 
 const styles = {
   container: {
-    padding: '20px',
-    maxWidth: '1200px'
+    padding: '2rem',
+    minHeight: '100vh',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    position: 'relative'
   },
   title: {
-    marginBottom: '30px',
-    color: '#333'
+    fontSize: '2.5rem',
+    fontWeight: '800',
+    color: 'white',
+    marginBottom: '2rem',
+    textAlign: 'center',
+    background: 'linear-gradient(45deg, #ffffff, #e0e7ff)',
+    WebkitBackgroundClip: 'text',
+    WebkitTextFillColor: 'transparent',
+    backgroundClip: 'text'
   },
   loading: {
     textAlign: 'center',
@@ -155,10 +164,12 @@ const styles = {
     margin: '10px 0'
   },
   bulletinsContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+    background: 'rgba(255, 255, 255, 0.95)',
+    backdropFilter: 'blur(20px)',
+    padding: '2.5rem',
+    borderRadius: '1.5rem',
+    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
+    border: '1px solid rgba(255, 255, 255, 0.2)'
   },
   noData: {
     textAlign: 'center',
@@ -173,10 +184,15 @@ const styles = {
     marginTop: '20px'
   },
   bulletinCard: {
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
-    padding: '20px',
-    backgroundColor: '#fafafa'
+    background: 'rgba(255, 255, 255, 0.8)',
+    backdropFilter: 'blur(15px)',
+    border: '1px solid rgba(255, 255, 255, 0.3)',
+    borderRadius: '1.5rem',
+    padding: '2rem',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    cursor: 'pointer',
+    position: 'relative',
+    overflow: 'hidden'
   },
   bulletinHeader: {
     display: 'flex',
@@ -229,13 +245,16 @@ const styles = {
     textAlign: 'center'
   },
   downloadButton: {
-    backgroundColor: '#007bff',
+    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
     color: 'white',
     border: 'none',
-    padding: '12px 24px',
-    borderRadius: '4px',
+    padding: '0.875rem 2rem',
+    borderRadius: '1rem',
     cursor: 'pointer',
-    fontSize: '14px'
+    fontSize: '0.875rem',
+    fontWeight: '600',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)'
   }
 };
 
