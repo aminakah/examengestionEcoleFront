@@ -99,9 +99,12 @@ const styles = {
     borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
     color: 'white',
     padding: '0',
-    position: 'sticky',
+    position: 'fixed',
     top: 0,
-    zIndex: 1000,
+    left: '280px', // Décaler pour éviter le sidebar
+    right: 0,
+    height: '75px',
+    zIndex: 999, // Moins que le sidebar (1000)
     transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     boxShadow: '0 4px 32px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden'
@@ -115,8 +118,7 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
-    maxWidth: '1400px',
-    margin: '0 auto',
+    width: '100%',
     height: '75px',
     padding: '0 2rem',
     position: 'relative',

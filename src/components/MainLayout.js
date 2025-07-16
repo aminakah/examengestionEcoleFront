@@ -41,8 +41,8 @@ const MainLayout = () => {
   return (
     <div style={styles.container}>
       <Navbar />
+      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
       <div style={styles.content}>
-        <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
         <main style={styles.main}>
           {renderPage()}
         </main>
@@ -57,12 +57,16 @@ const styles = {
     backgroundColor: '#f5f5f5'
   },
   content: {
-    display: 'flex'
+    position: 'relative',
+    minHeight: '100vh'
   },
   main: {
-    flex: 1,
-    padding: '0',
-    overflow: 'auto'
+    marginLeft: '280px', // Largeur du sidebar
+    marginTop: '75px', // Hauteur de la navbar
+    padding: '10px',
+    minHeight: 'calc(100vh - 75px)',
+    overflow: 'auto',
+    transition: 'margin-left 0.3s ease'
   }
 };
 

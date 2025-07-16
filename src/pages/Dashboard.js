@@ -11,7 +11,7 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
   const [activeStat, setActiveStat] = useState(null);
 
-  useEffect(() => {sdcv 
+  useEffect(() => {
     loadStats();
   }, []);
 
