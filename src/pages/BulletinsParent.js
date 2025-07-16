@@ -10,7 +10,7 @@ const BulletinsParent = () => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, []);eecdfc
 
   const loadData = async () => {
     try {
