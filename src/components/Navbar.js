@@ -41,18 +41,7 @@ const Navbar = () => {
       ...(isScrolled ? styles.navbarScrolled : {})
     }}>
       <div style={styles.navContent}>
-        {/* Logo moderne avec animation */}
-        <div style={styles.logo} className="pulse-on-hover">
-          <div style={styles.logoIcon}>
-            🎓
-          </div>
-          <span style={styles.logoText}>
-            EduPortal
-          </span>
-          <div style={styles.logoBadge}>
-            2025
-          </div>
-        </div>
+       
         
         {/* Info utilisateur avec design glassmorphism */}
         <div style={styles.userSection}>
@@ -93,11 +82,11 @@ const Navbar = () => {
 
 const styles = {
   navbar: {
-    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.95) 0%, rgba(118, 75, 162, 0.95) 100%)',
+    backgroundColor: '#CBDBEC',
     backdropFilter: 'blur(20px)',
     WebkitBackdropFilter: 'blur(20px)',
-    borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-    color: 'white',
+    borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
+    color: '#334155',
     padding: '0',
     position: 'fixed',
     top: 0,
@@ -105,18 +94,18 @@ const styles = {
     right: 0,
     height: '75px',
     zIndex: 999, // Moins que le sidebar (1000)
-    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+    // transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
     boxShadow: '0 4px 32px rgba(0, 0, 0, 0.1)',
     overflow: 'hidden'
   },
   navbarScrolled: {
-    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.98) 0%, rgba(118, 75, 162, 0.98) 100%)',
+    background: '#D5E0EC',
     boxShadow: '0 8px 40px rgba(0, 0, 0, 0.15)',
     backdropFilter: 'blur(25px)'
   },
   navContent: {
     display: 'flex',
-    justifyContent: 'space-between',
+    justifyContent: 'end',
     alignItems: 'center',
     width: '100%',
     height: '75px',
@@ -134,7 +123,6 @@ const styles = {
   logoIcon: {
     width: '40px',
     height: '40px',
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
     borderRadius: '12px',
     display: 'flex',
     alignItems: 'center',
@@ -147,10 +135,7 @@ const styles = {
   logoText: {
     fontSize: '1.75rem',
     fontWeight: '800',
-    background: 'linear-gradient(45deg, #ffffff 0%, #e0e7ff 50%, #c7d2fe 100%)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text',
+    color: '#1f2937',
     letterSpacing: '-0.5px'
   },
   logoBadge: {
@@ -165,6 +150,7 @@ const styles = {
   },
   userSection: {
     display: 'flex',
+    justifyContent:'end',
     alignItems: 'center',
     gap: '1rem'
   },
@@ -200,7 +186,7 @@ const styles = {
   username: {
     fontSize: '0.875rem',
     fontWeight: '600',
-    color: 'white',
+    color: '#1f2937',
     lineHeight: '1.2'
   },
   userRole: {
@@ -242,7 +228,7 @@ const styles = {
     left: 0,
     right: 0,
     bottom: 0,
-    background: 'radial-gradient(circle at 20% 50%, rgba(139, 92, 246, 0.3) 0%, transparent 50%), radial-gradient(circle at 80% 50%, rgba(59, 130, 246, 0.3) 0%, transparent 50%)',
+    background: 'transparent',
     opacity: 0.6,
     zIndex: 1,
     pointerEvents: 'none'

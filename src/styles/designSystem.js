@@ -17,8 +17,8 @@ export const designSystem = {
       600: '#16a34a'
     },
     accent: {
-      500: '#8b5cf6',
-      600: '#7c3aed'
+      500: '#2b0389ff',
+      600: '#3b0a91ff'
     },
     neutral: {
       50: '#f8fafc',

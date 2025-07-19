@@ -36,7 +36,7 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
       left: '0',
       width: '280px',
       height: '100vh',
-      background: 'linear-gradient(180deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.95) 100%)',
+      backgroundColor:'#05317E',
       backdropFilter: 'blur(20px)',
       borderRight: '1px solid rgba(226, 232, 240, 0.8)',
       padding: '0',
@@ -52,7 +52,6 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         left: 0,
         right: 0,
         bottom: 0,
-        background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.03) 0%, rgba(139, 92, 246, 0.03) 100%)',
         pointerEvents: 'none'
       }}></div>
       
@@ -62,7 +61,6 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         alignItems: 'center',
         padding: '12px ',
         borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
-        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.8) 0%, rgba(255, 255, 255, 0.4) 100%)',
         position: 'relative',
         zIndex: 1
       }}>
@@ -75,7 +73,8 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '1.5rem',
-          marginRight: '1rem',
+          marginLeft: '1rem',
+          marginRight:'10px',
           boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
           border: '2px solid rgba(255, 255, 255, 0.8)'
         }}>
@@ -83,9 +82,9 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         </div>
         <div style={{ flex: 1 }}>
           <div style={{
-            fontSize: '1rem',
+            fontSize: '1.5rem',
             fontWeight: '700',
-            color: '#1f2937',
+            color: '#feffffff',
             marginBottom: '0.25rem',
             lineHeight: '1.2'
           }}>EduPortal</div>
@@ -99,19 +98,7 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         position: 'relative',
         zIndex: 1
       }}>
-        <div style={{
-          padding: '0 1.5rem 1rem',
-          borderBottom: '1px solid rgba(226, 232, 240, 0.3)',
-          marginBottom: '1rem'
-        }}>
-          <span style={{
-            fontSize: '0.75rem',
-            fontWeight: '700',
-            color: '#9ca3af',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}>Navigation</span>
-        </div>
+      
         {getMenuItems().map(item => (
           <button
             key={item.id}
@@ -127,13 +114,14 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
               cursor: 'pointer',
               fontSize: '0.875rem',
               fontWeight: '500',
-              color: currentPage === item.id ? 'white' : '#64748b',
+              color: currentPage === item.id ? '#0d52b3ff' : '#ffffffff',
               borderRadius: '0.75rem',
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               position: 'relative',
               overflow: 'hidden',
               margin: '0.25rem 1rem',
-              background: currentPage === item.id ? 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)' : 'transparent',
+
+              background: currentPage === item.id ? '#ffffffff' : 'transparent',
               transform: currentPage === item.id ? 'translateX(8px)' : 'translateX(0)',
               boxShadow: currentPage === item.id ? '0 10px 25px rgba(59, 130, 246, 0.3)' : 'none'
             }}

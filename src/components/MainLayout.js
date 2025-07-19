@@ -38,6 +38,12 @@ const MainLayout = () => {
     }
   };
 
+  // Pour le dashboard, utiliser le nouveau design complet
+  if (currentPage === 'dashboard') {
+    return <Dashboard />;
+  }
+
+  // Pour les autres pages, utiliser l'ancien layout
   return (
     <div style={styles.container}>
       <Navbar />
@@ -54,11 +60,12 @@ const MainLayout = () => {
 const styles = {
   container: {
     minHeight: '100vh',
-    backgroundColor: '#f5f5f5'
+    backgroundColor: '#D5E0EC'
   },
   content: {
     position: 'relative',
-    minHeight: '100vh'
+    minHeight: '100vh',
+    backgroundColor: '#D5E0EC'
   },
   main: {
     marginLeft: '280px', // Largeur du sidebar
@@ -66,7 +73,8 @@ const styles = {
     padding: '10px',
     minHeight: 'calc(100vh - 75px)',
     overflow: 'auto',
-    transition: 'margin-left 0.3s ease'
+    transition: 'margin-left 0.3s ease',
+    backgroundColor: '#D5E0EC'
   }
 };
 

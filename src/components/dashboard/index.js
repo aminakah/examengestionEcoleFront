@@ -1,0 +1,9 @@
+// Export de tous les composants du dashboard
+export { default as Dashboard } from './Dashboard';
+export { default as Sidebar } from './Sidebar';
+export { default as Header } from './Header';
+export { default as StatsCard } from './StatsCard';
+export { default as RecentActivities } from './RecentActivities';
+export { default as QuickActions } from './QuickActions';
+export { default as StudentOverview } from './StudentOverview';
+export { default as ClassSchedule } from './ClassSchedule';
