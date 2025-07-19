@@ -1,15 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import Navbar from './Navbar';
+import Sidebar from './Sidebar';
 import Dashboard from '../pages/Dashboard';
 import GestionEleves from '../pages/GestionEleves';
 import GestionEnseignants from '../pages/GestionEnseignants';
 import GestionClasses from '../pages/GestionClasses';
 import GestionMatieres from '../pages/GestionMatieres';
-import SaisieNotes from '../pages/SaisieNotes';
-import Bulletins from '../pages/Bulletins';
-import BulletinsParent from '../pages/BulletinsParent';
+import SaisieNotesAmelioree from '../pages/SaisieNotesAmelioree';
+import BulletinsAdmin from '../pages/BulletinsAdmin';
+import BulletinsParentAmélioré from '../pages/BulletinsParentAmélioré';
+import GestionDocuments from '../pages/GestionDocuments';
 
 const MainLayout = () => {
   const [currentPage, setCurrentPage] = useState('dashboard');
@@ -20,36 +21,42 @@ const MainLayout = () => {
       case 'dashboard':
         return <Dashboard />;
       case 'eleves':
-        return user?.role === 'admin' ? <GestionEleves /> : <div>Accès non autorisé</div>;
+        return user?.role === 'admin' ? <GestionEleves /> : <AccessDenied />;
       case 'enseignants':
-        return user?.role === 'admin' ? <GestionEnseignants /> : <div>Accès non autorisé</div>;
+        return user?.role === 'admin' ? <GestionEnseignants /> : <AccessDenied />;
       case 'classes':
-        return user?.role === 'admin' ? <GestionClasses /> : <div>Accès non autorisé</div>;
+        return user?.role === 'admin' ? <GestionClasses /> : <AccessDenied />;
       case 'matieres':
-        return user?.role === 'admin' ? <GestionMatieres /> : <div>Accès non autorisé</div>;
+        return user?.role === 'admin' ? <GestionMatieres /> : <AccessDenied />;
       case 'notes':
-        return ['admin', 'enseignant'].includes(user?.role) ? <SaisieNotes /> : <div>Accès non autorisé</div>;
+        return ['admin', 'enseignant'].includes(user?.role) ? <SaisieNotesAmelioree /> : <AccessDenied />;
       case 'bulletins':
-        return ['admin', 'enseignant'].includes(user?.role) ? <Bulletins /> : <div>Accès non autorisé</div>;
-      case 'bulletins-parent':
-        return user?.role === 'parent' ? <BulletinsParent /> : <div>Accès non autorisé</div>;
+        if (user?.role === 'parent') {
+          return <BulletinsParentAmélioré />;
+        } else if (['admin', 'enseignant'].includes(user?.role)) {
+          return <BulletinsAdmin />;
+        } else {
+          return <AccessDenied />;
+        }
+      case 'documents':
+        return user?.role === 'admin' ? <GestionDocuments /> : <AccessDenied />;
       default:
         return <Dashboard />;
     }
   };
 
-  // Pour le dashboard, utiliser le nouveau design complet
-  if (currentPage === 'dashboard') {
-    return <Dashboard />;
-  }
-
-  // Pour les autres pages, utiliser l'ancien layout
   return (
-    <div style={styles.container}>
-      <Navbar />
+    <div className="min-h-screen bg-gray-50 flex">
+      {/* Sidebar */}
       <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <div style={styles.content}>
-        <main style={styles.main}>
+      
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col ml-64">
+        {/* Navbar */}
+        <Navbar />
+        
+        {/* Page Content */}
+        <main className="flex-1 p-6 pt-20 overflow-auto">
           {renderPage()}
         </main>
       </div>
@@ -57,25 +64,15 @@ const MainLayout = () => {
   );
 };
 
-const styles = {
-  container: {
-    minHeight: '100vh',
-    backgroundColor: '#D5E0EC'
-  },
-  content: {
-    position: 'relative',
-    minHeight: '100vh',
-    backgroundColor: '#D5E0EC'
-  },
-  main: {
-    marginLeft: '280px', // Largeur du sidebar
-    marginTop: '75px', // Hauteur de la navbar
-    padding: '10px',
-    minHeight: 'calc(100vh - 75px)',
-    overflow: 'auto',
-    transition: 'margin-left 0.3s ease',
-    backgroundColor: '#D5E0EC'
-  }
-};
+// Composant pour l'accès refusé
+const AccessDenied = () => (
+  <div className="flex items-center justify-center h-64">
+    <div className="text-center">
+      <div className="text-6xl mb-4">🚫</div>
+      <h3 className="text-lg font-medium text-gray-900 mb-2">Accès non autorisé</h3>
+      <p className="text-gray-500">Vous n'avez pas les permissions pour accéder à cette page.</p>
+    </div>
+  </div>
+);
 
 export default MainLayout;

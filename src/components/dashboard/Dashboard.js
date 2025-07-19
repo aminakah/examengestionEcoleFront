@@ -53,14 +53,14 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar activeItem={activeItem} setActiveItem={setActiveItem} />
+      {/* <Sidebar activeItem={activeItem} setActiveItem={setActiveItem} /> */}
       
       <div className="flex-1">
-        <Header />
-        
+        {/* <Header />
+         */}
         <div className="p-6">
           {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+          {/* <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
             {statsData.map((stat, index) => (
               <StatsCard
                 key={index}
@@ -72,7 +72,7 @@ const Dashboard = () => {
                 trendValue={stat.trendValue}
               />
             ))}
-          </div>
+          </div> */}
 
           {/* Main Content Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

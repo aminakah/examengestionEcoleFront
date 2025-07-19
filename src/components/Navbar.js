@@ -1,238 +1,166 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { 
+  Bell, 
+  Search, 
+  Settings, 
+  LogOut, 
+  User, 
+  Menu,
+  ChevronDown
+} from 'lucide-react';
 
 const Navbar = () => {
   const { user, logout } = useAuth();
-  const [isScrolled, setIsScrolled] = useState(false);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 10);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  const handleLogout = () => {
-    logout();
-  };
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const getRoleColor = (role) => {
     switch(role) {
-      case 'admin': return '#8b5cf6';
-      case 'enseignant': return '#10b981';
-      case 'parent': return '#f59e0b';
-      default: return '#64748b';
+      case 'admin': return 'bg-purple-100 text-purple-800';
+      case 'enseignant': return 'bg-green-100 text-green-800';
+      case 'parent': return 'bg-blue-100 text-blue-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const getRoleIcon = (role) => {
+  const getRoleLabel = (role) => {
     switch(role) {
-      case 'admin': return '👑';
-      case 'enseignant': return '📚';
-      case 'parent': return '👨‍👩‍👧‍👦';
-      default: return '👤';
+      case 'admin': return 'Administrateur';
+      case 'enseignant': return 'Enseignant';
+      case 'parent': return 'Parent';
+      default: return 'Utilisateur';
     }
   };
+
+  const mockNotifications = [
+    { id: 1, message: 'Nouveau bulletin disponible', time: '5 min', unread: true },
+    { id: 2, message: 'Note saisie en Mathématiques', time: '1h', unread: true },
+    { id: 3, message: 'Réunion parent-professeur', time: '2h', unread: false }
+  ];
+
+  const unreadCount = mockNotifications.filter(n => n.unread).length;
 
   return (
-    <nav style={{
-      ...styles.navbar,
-      ...(isScrolled ? styles.navbarScrolled : {})
-    }}>
-      <div style={styles.navContent}>
-       
-        
-        {/* Info utilisateur avec design glassmorphism */}
-        <div style={styles.userSection}>
-          <div style={styles.userInfo}>
-            <div style={styles.userAvatar}>
-              {getRoleIcon(user?.role)}
-            </div>
-            <div style={styles.userDetails}>
-              <span style={styles.username}>
-                {user?.name}
-              </span>
-              <span style={{
-                ...styles.userRole,
-                background: `linear-gradient(135deg, ${getRoleColor(user?.role)}20, ${getRoleColor(user?.role)}40)`,
-                color: getRoleColor(user?.role)
-              }}>
-                {user?.role}
-              </span>
+    <nav className="fixed top-0 right-0 left-64 bg-white shadow-sm border-b border-gray-200 z-30">
+      <div className="px-6 py-4">
+        <div className="flex items-center justify-between">
+          {/* Left side - Search */}
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Rechercher..."
+                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+              />
             </div>
           </div>
-          
-          <button 
-            onClick={handleLogout}
-            style={styles.logoutBtn}
-            className="fade-in-up"
-          >
-            <span style={styles.logoutIcon}>🚪</span>
-            Déconnexion
-          </button>
+
+          {/* Right side - User info and actions */}
+          <div className="flex items-center space-x-4">
+            {/* Notifications */}
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Notifications dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-4 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-900">Notifications</h3>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {mockNotifications.map(notification => (
+                      <div key={notification.id} className="p-3 hover:bg-gray-50 border-b border-gray-100 last:border-b-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <p className={`text-sm ${notification.unread ? 'font-medium text-gray-900' : 'text-gray-600'}`}>
+                              {notification.message}
+                            </p>
+                            <p className="text-xs text-gray-500 mt-1">{notification.time}</p>
+                          </div>
+                          {notification.unread && (
+                            <div className="w-2 h-2 bg-blue-500 rounded-full ml-2 mt-1"></div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="p-3 border-t border-gray-200">
+                    <button className="text-sm text-blue-600 hover:text-blue-800 font-medium">
+                      Voir toutes les notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* User menu */}
+            <div className="relative">
+              <button
+                onClick={() => setShowUserMenu(!showUserMenu)}
+                className="flex items-center space-x-3 p-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
+                    <User className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className={`text-xs px-2 py-1 rounded-full ${getRoleColor(user?.role)}`}>
+                      {getRoleLabel(user?.role)}
+                    </div>
+                  </div>
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </div>
+              </button>
+
+              {/* User dropdown menu */}
+              {showUserMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
+                  <div className="p-3 border-b border-gray-200">
+                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className="text-sm text-gray-500">{user?.email}</div>
+                  </div>
+                  
+                  <div className="py-1">
+                    <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <User className="w-4 h-4 mr-3" />
+                      Mon profil
+                    </button>
+                    <button className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
+                      <Settings className="w-4 h-4 mr-3" />
+                      Paramètres
+                    </button>
+                  </div>
+                  
+                  <div className="border-t border-gray-200">
+                    <button 
+                      onClick={logout}
+                      className="flex items-center w-full px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                    >
+                      <LogOut className="w-4 h-4 mr-3" />
+                      Déconnexion
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
-      
-      {/* Effet de lueur en arrière-plan */}
-      <div style={styles.backgroundGlow}></div>
     </nav>
   );
-};
-
-const styles = {
-  navbar: {
-    backgroundColor: '#CBDBEC',
-    backdropFilter: 'blur(20px)',
-    WebkitBackdropFilter: 'blur(20px)',
-    borderBottom: '1px solid rgba(0, 0, 0, 0.1)',
-    color: '#334155',
-    padding: '0',
-    position: 'fixed',
-    top: 0,
-    left: '280px', // Décaler pour éviter le sidebar
-    right: 0,
-    height: '75px',
-    zIndex: 999, // Moins que le sidebar (1000)
-    // transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 32px rgba(0, 0, 0, 0.1)',
-    overflow: 'hidden'
-  },
-  navbarScrolled: {
-    background: '#D5E0EC',
-    boxShadow: '0 8px 40px rgba(0, 0, 0, 0.15)',
-    backdropFilter: 'blur(25px)'
-  },
-  navContent: {
-    display: 'flex',
-    justifyContent: 'end',
-    alignItems: 'center',
-    width: '100%',
-    height: '75px',
-    padding: '0 2rem',
-    position: 'relative',
-    zIndex: 2
-  },
-  logo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    cursor: 'pointer',
-    transition: 'all 0.3s ease'
-  },
-  logoIcon: {
-    width: '40px',
-    height: '40px',
-    borderRadius: '12px',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '20px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
-    boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)'
-  },
-  logoText: {
-    fontSize: '1.75rem',
-    fontWeight: '800',
-    color: '#1f2937',
-    letterSpacing: '-0.5px'
-  },
-  logoBadge: {
-    fontSize: '0.65rem',
-    fontWeight: '700',
-    background: 'linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)',
-    color: 'white',
-    padding: '0.25rem 0.5rem',
-    borderRadius: '1rem',
-    boxShadow: '0 2px 8px rgba(251, 191, 36, 0.3)',
-    animation: 'pulse 2s infinite'
-  },
-  userSection: {
-    display: 'flex',
-    justifyContent:'end',
-    alignItems: 'center',
-    gap: '1rem'
-  },
-  userInfo: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.75rem',
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.05) 100%)',
-    padding: '0.75rem 1rem',
-    borderRadius: '2rem',
-    backdropFilter: 'blur(15px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-    transition: 'all 0.3s ease'
-  },
-  userAvatar: {
-    width: '36px',
-    height: '36px',
-    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.2) 0%, rgba(255, 255, 255, 0.1) 100%)',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '16px',
-    border: '2px solid rgba(255, 255, 255, 0.3)',
-    boxShadow: '0 2px 10px rgba(0, 0, 0, 0.1)'
-  },
-  userDetails: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '0.125rem'
-  },
-  username: {
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    color: '#1f2937',
-    lineHeight: '1.2'
-  },
-  userRole: {
-    fontSize: '0.7rem',
-    fontWeight: '600',
-    padding: '0.2rem 0.6rem',
-    borderRadius: '1rem',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
-    lineHeight: '1'
-  },
-  logoutBtn: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.9) 100%)',
-    color: 'white',
-    padding: '0.75rem 1.25rem',
-    borderRadius: '1.5rem',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 20px rgba(239, 68, 68, 0.3)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
-    overflow: 'hidden',
-    position: 'relative'
-  },
-  logoutIcon: {
-    fontSize: '14px',
-    transition: 'transform 0.3s ease'
-  },
-  backgroundGlow: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'transparent',
-    opacity: 0.6,
-    zIndex: 1,
-    pointerEvents: 'none'
-  }
 };
 
 export default Navbar;

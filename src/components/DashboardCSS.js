@@ -211,97 +211,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="sidebar-logo">
-          <div className="sidebar-logo-icon">
-            <GraduationCap size={24} />
-          </div>
-          <div>
-            <div className="sidebar-title">EduPortal</div>
-            <div className="sidebar-subtitle">Gestion Scolaire</div>
-          </div>
-        </div>
-
-        <nav className="sidebar-nav">
-          {menuItems.map((item) => {
-            const Icon = item.icon;
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveItem(item.id)}
-                className={`sidebar-item ${activeItem === item.id ? 'active' : ''}`}
-              >
-                <Icon size={20} />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer">
-          <div>EduPortal v2.0</div>
-          <div>© 2024 - Système Éducatif</div>
-        </div>
-      </div>
-
-      {/* Main Content */}
-      <div className="main-content">
-        {/* Header */}
-        <div className="header">
-          <div className="header-content">
-            <div className="header-title-section">
-              <div>
-                <h1 className="header-title">Tableau de Bord</h1>
-                <div className="header-date-time">
-                  <div className="header-date-item">
-                    <Calendar size={16} />
-                    <span>{getCurrentDate()}</span>
-                  </div>
-                  <div className="header-date-item">
-                    <Clock size={16} />
-                    <span>{getCurrentTime()}</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="header-actions">
-              <div className="search-container">
-                <Search className="search-icon" size={16} />
-                <input
-                  type="text"
-                  placeholder="Rechercher un étudiant, cours..."
-                  className="search-input"
-                />
-              </div>
-
-              <button className="notification-btn">
-                <Bell size={20} />
-                <span className="notification-badge">5</span>
-              </button>
-
-              <button className="notification-btn">
-                <Mail size={20} />
-                <span className="notification-badge blue">12</span>
-              </button>
-
-              <div className="user-profile">
-                <div className="user-info">
-                  <p className="user-name">Directeur Académique</p>
-                  <p className="user-role">Administration</p>
-                </div>
-                <div className="user-avatar">
-                  <User size={24} />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Dashboard Content */}
-        <div className="dashboard-content">
+   <div className="dashboard-content">
           {/* Stats Cards */}
           <div className="stats-grid">
             {statsData.map((stat, index) => {
@@ -497,8 +407,6 @@ const Dashboard = () => {
             </div>
           </div>
         </div>
-      </div>
-    </div>
   );
 };
 

@@ -1,208 +1,119 @@
 import React from 'react';
 import { useAuth } from '../context/AuthContext';
+import { 
+  LayoutDashboard, 
+  Users, 
+  BookOpen, 
+  ClipboardList,
+  School,
+  UserCheck,
+  Award,
+  Upload,
+  User,
+  LogOut
+} from 'lucide-react';
 
 const Sidebar = ({ currentPage, setCurrentPage }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const getMenuItems = () => {
-    const baseItems = [
-      { id: 'dashboard', label: 'Tableau de bord', icon: '📊', roles: ['admin', 'enseignant'] },
+    const items = [
+      { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'enseignant', 'parent'] },
     ];
 
-    const adminItems = [
-      { id: 'eleves', label: 'Gestion des élèves', icon: '👨‍🎓', roles: ['admin'] },
-      { id: 'enseignants', label: 'Gestion des enseignants', icon: '👩‍🏫', roles: ['admin'] },
-      { id: 'classes', label: 'Gestion des classes', icon: '🏫', roles: ['admin'] },
-      { id: 'matieres', label: 'Gestion des matières', icon: '📚', roles: ['admin'] },
-    ];
+    // Items admin seulement
+    if (user?.role === 'admin') {
+      items.push(
+        { id: 'eleves', label: 'Gestion des élèves', icon: Users, roles: ['admin'] },
+        { id: 'enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['admin'] },
+        { id: 'classes', label: 'Gestion des classes', icon: School, roles: ['admin'] },
+        { id: 'matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['admin'] },
+        { id: 'documents', label: 'Gestion des documents', icon: Upload, roles: ['admin'] }
+      );
+    }
 
-    const enseignantItems = [
-      { id: 'notes', label: 'Saisie des notes', icon: '📝', roles: ['admin', 'enseignant'] },
-      { id: 'bulletins', label: 'Bulletins', icon: '📄', roles: ['admin', 'enseignant'] },
-    ];
+    // Items admin et enseignant
+    if (['admin', 'enseignant'].includes(user?.role)) {
+      items.push(
+        { id: 'notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['admin', 'enseignant'] },
+        { id: 'bulletins', label: 'Bulletins', icon: Award, roles: ['admin', 'enseignant'] }
+      );
+    }
 
-    const parentItems = [
-      { id: 'bulletins-parent', label: 'Bulletins de mon enfant', icon: '👶', roles: ['parent'] },
-    ];
+    // Items parent
+    if (user?.role === 'parent') {
+      items.push(
+        { id: 'bulletins', label: 'Bulletins de mes enfants', icon: Award, roles: ['parent'] }
+      );
+    }
 
-    return [...baseItems, ...adminItems, ...enseignantItems, ...parentItems]
-      .filter(item => item.roles.includes(user?.role));
+    return items;
   };
 
+  const menuItems = getMenuItems();
+
   return (
-    <div style={{
-      position: 'fixed',
-      top: '0',
-      left: '0',
-      width: '280px',
-      height: '100vh',
-      backgroundColor:'#05317E',
-      backdropFilter: 'blur(20px)',
-      borderRight: '1px solid rgba(226, 232, 240, 0.8)',
-      padding: '0',
-      overflow: 'hidden',
-      overflowY: 'auto',
-      boxShadow: '4px 0 20px rgba(0, 0, 0, 0.05)',
-      zIndex: 1000
-    }}>
-      {/* Overlay décoratif */}
-      <div style={{
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        pointerEvents: 'none'
-      }}></div>
-      
-      {/* Avatar utilisateur */}
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        padding: '12px ',
-        borderBottom: '1px solid rgba(226, 232, 240, 0.5)',
-        position: 'relative',
-        zIndex: 1
-      }}>
-        <div style={{
-          width: '50px',
-          height: '50px',
-          borderRadius: '1rem',
-          background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: '1.5rem',
-          marginLeft: '1rem',
-          marginRight:'10px',
-          boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)',
-          border: '2px solid rgba(255, 255, 255, 0.8)'
-        }}>
-          🎓
-        </div>
-        <div style={{ flex: 1 }}>
-          <div style={{
-            fontSize: '1.5rem',
-            fontWeight: '700',
-            color: '#feffffff',
-            marginBottom: '0.25rem',
-            lineHeight: '1.2'
-          }}>EduPortal</div>
-         
-        </div>
-      </div>
-
-      {/* Menu navigation */}
-      <div style={{
-        padding: '1rem 0',
-        position: 'relative',
-        zIndex: 1
-      }}>
-      
-        {getMenuItems().map(item => (
-          <button
-            key={item.id}
-            onClick={() => setCurrentPage(item.id)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              width: '100%',
-              padding: '1rem 1.5rem',
-              border: 'none',
-              backgroundColor: 'transparent',
-              textAlign: 'left',
-              cursor: 'pointer',
-              fontSize: '0.875rem',
-              fontWeight: '500',
-              color: currentPage === item.id ? '#0d52b3ff' : '#ffffffff',
-              borderRadius: '0.75rem',
-              transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-              position: 'relative',
-              overflow: 'hidden',
-              margin: '0.25rem 1rem',
-
-              background: currentPage === item.id ? '#ffffffff' : 'transparent',
-              transform: currentPage === item.id ? 'translateX(8px)' : 'translateX(0)',
-              boxShadow: currentPage === item.id ? '0 10px 25px rgba(59, 130, 246, 0.3)' : 'none'
-            }}
-            className="hover-lift"
-          >
-            <div style={{
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              marginRight: '0.75rem',
-              fontSize: '1.1rem',
-              transition: 'transform 0.3s ease'
-            }}>
-              <span>{item.icon}</span>
-            </div>
-            <span style={{
-              flex: 1,
-              fontSize: '0.875rem',
-              fontWeight: '500'
-            }}>{item.label}</span>
-            {currentPage === item.id && (
-              <div style={{
-                position: 'absolute',
-                right: '1rem',
-                width: '6px',
-                height: '6px',
-                borderRadius: '50%',
-                background: 'rgba(255, 255, 255, 0.8)',
-                boxShadow: '0 0 10px rgba(255, 255, 255, 0.5)'
-              }}></div>
-            )}
-          </button>
-        ))}
-      </div>
-
-      {/* Section aide */}
-      <div style={{
-        position: 'absolute',
-        bottom: '2rem',
-        left: '1.5rem',
-        right: '1.5rem',
-        zIndex: 1
-      }}>
-        <div style={{
-          background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%)',
-          border: '1px solid rgba(59, 130, 246, 0.2)',
-          borderRadius: '1rem',
-          padding: '1rem',
-          display: 'flex',
-          alignItems: 'center',
-          cursor: 'pointer',
-          transition: 'all 0.3s ease',
-          backdropFilter: 'blur(10px)'
-        }}>
-          <div style={{
-            width: '32px',
-            height: '32px',
-            borderRadius: '0.5rem',
-            background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginRight: '0.75rem',
-            fontSize: '1rem'
-          }}>💡</div>
-          <div style={{ flex: 1 }}>
-            <div style={{
-              fontSize: '0.8rem',
-              fontWeight: '600',
-              color: '#374151',
-              marginBottom: '0.25rem'
-            }}>Besoin d'aide ?</div>
-            <div style={{
-              fontSize: '0.7rem',
-              color: '#6b7280',
-              lineHeight: '1.3'
-            }}>Consultez notre guide</div>
+    <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-gray-200 z-40 overflow-y-auto">
+      {/* Header */}
+      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3">
+            <School className="w-6 h-6 text-blue-600" />
+          </div>
+          <div>
+            <h2 className="text-white font-bold text-lg">École Moderne</h2>
+            <p className="text-blue-100 text-sm">Portail Scolaire</p>
           </div>
         </div>
+      </div>
+
+      {/* User Info */}
+      <div className="p-4 border-b border-gray-200 bg-gray-50">
+        <div className="flex items-center">
+          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+            <User className="w-6 h-6 text-blue-600" />
+          </div>
+          <div className="flex-1">
+            <div className="font-medium text-gray-900">{user?.name}</div>
+            <div className="text-sm text-gray-500 capitalize">{user?.role}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation */}
+      <nav className="flex-1 py-4">
+        {menuItems.map(item => {
+          const isActive = currentPage === item.id;
+          const Icon = item.icon;
+          
+          return (
+            <button
+              key={item.id}
+              onClick={() => setCurrentPage(item.id)}
+              className={`w-full flex items-center px-4 py-3 text-left transition-all duration-200 ${
+                isActive
+                  ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
+                  : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
+              }`}
+            >
+              <Icon className={`w-5 h-5 mr-3 ${
+                isActive ? 'text-blue-700' : 'text-gray-500'
+              }`} />
+              <span className="font-medium">{item.label}</span>
+            </button>
+          );
+        })}
+      </nav>
+
+      {/* Footer */}
+      <div className="p-4 border-t border-gray-200 bg-gray-50">
+        <button
+          onClick={logout}
+          className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+        >
+          <LogOut className="w-5 h-5 mr-3" />
+          <span className="font-medium">Déconnexion</span>
+        </button>
       </div>
     </div>
   );
