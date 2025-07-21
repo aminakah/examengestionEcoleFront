@@ -17,6 +17,17 @@ const GestionClasses = () => {
   const [selectedClasse, setSelectedClasse] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // Fonction utilitaire pour extraire le nom du niveau
+  const getNiveauName = (niveau) => {
+    if (!niveau) return 'Non défini';
+    return typeof niveau === 'object' ? niveau.nom : niveau;
+  };
+
+  // Fonction utilitaire pour extraire l'effectif
+  const getEffectif = (effectif) => {
+    return typeof effectif === 'number' ? effectif : 0;
+  };
+
   useEffect(() => {
     loadClasses();
   }, []);
@@ -24,9 +35,22 @@ const GestionClasses = () => {
   const loadClasses = async () => {
     try {
       const response = await apiService.get('/classes');
-      setClasses(response.data);
+      console.log('📊 Structure des données classes:', response.data);
+      
+      // Vérifier que les données sont bien un array
+      const classesData = Array.isArray(response.data) ? response.data : [];
+      
+      // Debug : afficher la structure d'une classe pour comprendre le format
+      if (classesData.length > 0) {
+        console.log('📋 Exemple de classe:', classesData[0]);
+        console.log('🎯 Type de niveau:', typeof classesData[0].niveau, classesData[0].niveau);
+        console.log('📈 Type d\'effectif:', typeof classesData[0].effectif, classesData[0].effectif);
+      }
+      
+      setClasses(classesData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      setClasses([]); // S'assurer qu'on a toujours un array
     } finally {
       setLoading(false);
     }
@@ -92,10 +116,13 @@ const GestionClasses = () => {
 
 
 
-  const filteredClasses = classes.filter(classe =>
-    classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    classe.niveau.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredClasses = Array.isArray(classes) ? classes.filter(classe => {
+    const classeNom = classe.nom ? classe.nom.toLowerCase() : '';
+    const niveauNom = getNiveauName(classe.niveau).toLowerCase();
+    
+    return classeNom.includes(searchTerm.toLowerCase()) ||
+           niveauNom.includes(searchTerm.toLowerCase());
+  }) : [];
 
   const columns = [
     {
@@ -108,7 +135,7 @@ const GestionClasses = () => {
           </div>
           <div>
             <div className="font-medium text-gray-900">{value || 'Nom non renseigné'}</div>
-            <div className="text-sm text-gray-500">{row.niveau || 'Niveau non renseigné'}</div>
+            <div className="text-sm text-gray-500">{getNiveauName(row.niveau)}</div>
           </div>
         </div>
       )
@@ -117,7 +144,7 @@ const GestionClasses = () => {
       key: 'niveau',
       label: 'Niveau',
       render: (value) => (
-        <Badge variant="info">{value}</Badge>
+        <Badge variant="info">{getNiveauName(value)}</Badge>
       )
     },
     {
@@ -126,7 +153,7 @@ const GestionClasses = () => {
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Users className="w-4 h-4 text-gray-400" />
-          <span className="font-medium">{value} élèves</span>
+          <span className="font-medium">{getEffectif(value)} élèves</span>
         </div>
       )
     }
@@ -163,8 +190,9 @@ const GestionClasses = () => {
   ];
 
   // Statistiques
-  const totalClasses = classes.length;
-  const totalEleves = classes.reduce((sum, classe) => sum + classe.effectif, 0);
+  const totalClasses = Array.isArray(classes) ? classes.length : 0;
+  const totalEleves = Array.isArray(classes) ? 
+    classes.reduce((sum, classe) => sum + getEffectif(classe.effectif), 0) : 0;
   const moyenneEffectif = totalClasses > 0 ? Math.round(totalEleves / totalClasses) : 0;
 
   if (loading) {

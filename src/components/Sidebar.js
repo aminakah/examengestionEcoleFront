@@ -25,27 +25,28 @@ const Sidebar = () => {
         path: '/dashboard', 
         label: 'Tableau de bord', 
         icon: LayoutDashboard, 
-        roles: ['admin', 'enseignant', 'parent'] 
+        // roles: ['admin', 'enseignant', 'parent'] 
+        roles: [] 
       },
     ];
 
     // Items admin seulement
-    if (user?.role === 'admin') {
+    if (user?.role === 'administrateur') {
       items.push(
-        { path: '/eleves', label: 'Gestion des élèves', icon: Users, roles: ['admin'] },
-        { path: '/enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['admin'] },
-        { path: '/classes', label: 'Gestion des classes', icon: School, roles: ['admin'] },
-        { path: '/matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['admin'] },
-        { path: '/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['admin'] },
-        { path: '/documents', label: 'Gestion des documents', icon: Upload, roles: ['admin'] }
+        { path: '/eleves', label: 'Gestion des élèves', icon: Users, roles: ['administrateur'] },
+        { path: '/enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['administrateur'] },
+        { path: '/classes', label: 'Gestion des classes', icon: School, roles: ['administrateur'] },
+        { path: '/matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['administrateur'] },
+        { path: '/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['administrateur'] },
+        { path: '/documents', label: 'Gestion des documents', icon: Upload, roles: ['administrateur'] }
       );
     }
 
-    // Items admin et enseignant
-    if (['admin', 'enseignant'].includes(user?.role)) {
+    // Items administrateur et enseignant
+    if (['administrateur', 'enseignant'].includes(user?.role)) {
       items.push(
-        { path: '/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['admin', 'enseignant'] },
-        { path: '/bulletins', label: 'Bulletins', icon: Award, roles: ['admin', 'enseignant'] }
+        { path: '/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['administrateur', 'enseignant'] },
+        { path: '/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] }
       );
     }
 
@@ -119,7 +120,7 @@ const Sidebar = () => {
             <User className="w-6 h-6 text-blue-600" />
           </div>
           <div className="flex-1">
-            <div className="font-semibold text-gray-900 text-sm">{user?.name || 'Utilisateur'}</div>
+            <div className="font-semibold text-gray-900 text-sm">{user?.nom || 'Utilisateur'}</div>
             <div className="text-xs text-gray-500 capitalize">{user?.role || 'Invité'}</div>
           </div>
         </div>

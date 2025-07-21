@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Eye, Mail, Phone, MapPin } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
-import { Card, Table, Badge, Loading, EmptyState } from '../components/UIComponents';
+import { Card, Badge, Loading, EmptyState, TableWithAdvancedScroll } from '../components/UIComponents';
 import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
 import Modal from '../components/Modal';
 import EleveForm from '../components/EleveForm';
@@ -29,7 +29,8 @@ const GestionEleves = () => {
         apiService.get('/classes')
       ]);
       
-      setEleves(elevesRes.data);
+      console.log(elevesRes.data);
+      setEleves(elevesRes.data.data);
       setClasses(classesRes.data);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -99,23 +100,24 @@ const GestionEleves = () => {
 
 
   const filteredEleves = eleves.filter(eleve =>
-    eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eleve.email.toLowerCase().includes(searchTerm.toLowerCase())
+    eleve.user.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.user.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.user.mail.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
     {
       key: 'nom',
       label: 'Nom complet',
+      minWidth: '250px',
       render: (value, row) => (
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-            {getInitials(row.prenom, value)}
+            {getInitials(row.user.prenom, value)}
           </div>
           <div>
-            <div className="font-medium text-gray-900">{formatFullName(row.prenom, value)}</div>
-            <div className="text-sm text-gray-500">{formatEmail(row.email)}</div>
+            <div className="font-medium text-gray-900">{formatFullName(row.user.prenom, value)}</div>
+            <div className="text-sm text-gray-500">{formatEmail(row.user.email)}</div>
           </div>
         </div>
       )
@@ -123,22 +125,32 @@ const GestionEleves = () => {
     {
       key: 'classe_nom',
       label: 'Classe',
-      render: (value) => (
-        <Badge variant="info">{value}</Badge>
+      minWidth: '120px',
+      render: (value,row) => (
+        <Badge variant="info">{row.inscriptions[0]?.classe.nom}</Badge>
       )
     },
     {
       key: 'date_naissance',
       label: 'Date de naissance',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR')
+      minWidth: '150px',
+      render: (value,row) => new Date(row.user.date_naissance).toLocaleDateString('fr-FR')
     },
     {
       key: 'parent_nom',
       label: 'Parent/Tuteur',
+      minWidth: '200px',
+      wrap: true,
       render: (value, row) => (
         <div>
-          <div className="font-medium text-gray-900">{row.parent_prenom} {value}</div>
-          <div className="text-sm text-gray-500">{row.parent_email}</div>
+          <div className="flex flex-wrap gap-1">
+                {row.parents.map((parent, index) => (
+              <div key={index}>
+                   <div className="font-medium text-gray-900">{parent.user.name} {value}</div>
+          <div className="text-sm text-gray-500">{parent.user.email}</div>
+              </div>
+                ))}
+              </div>
         </div>
       )
     }
@@ -225,10 +237,16 @@ const GestionEleves = () => {
             actionLabel="Ajouter un élève"
           />
         ) : (
-          <Table
+          <TableWithAdvancedScroll
             columns={columns}
             data={filteredEleves}
             actions={actions}
+            maxHeight="500px"
+            itemsPerPage={15}
+            showPagination={true}
+            stickyHeader={true}
+            stickyActions={true}
+            emptyMessage="Aucun élève trouvé avec ces critères"
           />
         )}
       </Card>

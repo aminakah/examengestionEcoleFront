@@ -24,6 +24,7 @@ const GestionMatieres = () => {
   const loadMatieres = async () => {
     try {
       const response = await apiService.get('/matieres');
+      console.log(response.data);
       setMatieres(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -126,21 +127,22 @@ const GestionMatieres = () => {
       )
     },
     {
-      key: 'description',
-      label: 'Description',
-      render: (value) => (
+      key: 'Niveau',
+      label: 'Niveau',
+      render: (value, row) => (
         <span className="text-sm text-gray-600">
-          {value || 'Aucune description'}
+          {row.niveau.nom || 'Aucune niveau'}
         </span>
       )
     },
     {
       key: 'enseignants_count',
       label: 'Enseignants',
-      render: (value) => (
+      render: (value,row) => (
         <div className="flex items-center space-x-1 text-sm text-gray-600">
           <Users className="w-4 h-4" />
-          <span>{value || 0} enseignant(s)</span>
+          <span>{row.enseignants
+[0]?.user?.name || "pas d'enseignant"} </span>
         </div>
       )
     }

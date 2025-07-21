@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, Plus, Edit, Trash2, Mail, Phone, BookOpen, GraduationCap, Eye } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
-import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { Card, TableWithAdvancedScroll, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
 import Modal from '../components/Modal';
 import EnseignantForm from '../components/EnseignantForm';
@@ -29,6 +29,7 @@ const GestionEnseignants = () => {
         apiService.get('/matieres')
       ]);
       
+      console.log(enseignantsRes.data);
       setEnseignants(enseignantsRes.data);
       setMatieres(matieresRes.data);
     } catch (error) {
@@ -99,9 +100,9 @@ const GestionEnseignants = () => {
 
 
   const filteredEnseignants = enseignants.filter(enseignant =>
-    enseignant.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    enseignant.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    enseignant.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    enseignant.user.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    enseignant.user.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    enseignant.user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (enseignant.matiere_nom && enseignant.matiere_nom.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
@@ -124,13 +125,19 @@ const GestionEnseignants = () => {
         </div>
       )
     },
-    {
-      key: 'matiere_nom',
-      label: 'Matière',
-      render: (value) => (
-        <Badge variant="info">{value}</Badge>
-      )
-    },
+   {
+  key: 'matiere_nom',
+  label: 'Matières',
+  render: (value, row) => (
+    <div className="flex flex-wrap gap-1">
+      {row.matieres.map((matiere, index) => (
+        <Badge key={index} variant="info">
+          {matiere.code}
+        </Badge>
+      ))}
+    </div>
+  )
+},
     {
       key: 'specialite',
       label: 'Spécialité',
@@ -143,7 +150,7 @@ const GestionEnseignants = () => {
         <div className="text-sm">
           <div className="flex items-center space-x-1">
             <Phone className="w-3 h-3 text-gray-400" />
-            <span>{value}</span>
+            <span>{row.user.telephone}</span>
           </div>
         </div>
       )
@@ -151,7 +158,8 @@ const GestionEnseignants = () => {
     {
       key: 'date_embauche',
       label: 'Date d\'embauche',
-      render: (value) => value ? new Date(value).toLocaleDateString('fr-FR') : 'Non renseignée'
+      render: (value, row) => row.created_at ? new Date(row.created_at
+).toLocaleDateString('fr-FR') : 'Non renseignée'
     }
   ];
 
@@ -263,10 +271,16 @@ const GestionEnseignants = () => {
             actionLabel="Ajouter un enseignant"
           />
         ) : (
-          <Table
+          <TableWithAdvancedScroll
             columns={columns}
             data={filteredEnseignants}
             actions={actions}
+            maxHeight="450px"
+            itemsPerPage={12}
+            showPagination={true}
+            stickyHeader={true}
+            stickyActions={true}
+            emptyMessage="Aucun enseignant trouvé avec ces critères de recherche"
           />
         )}
       </Card>

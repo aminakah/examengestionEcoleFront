@@ -13,10 +13,9 @@ const Navbar = () => {
   const { user, logout } = useAuth();
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
-
   const getRoleColor = (role) => {
     switch(role) {
-      case 'admin': return 'bg-purple-100 text-purple-800';
+      case "administrateur": return 'bg-purple-100 text-purple-800';
       case 'enseignant': return 'bg-green-100 text-green-800';
       case 'parent': return 'bg-blue-100 text-blue-800';
       default: return 'bg-gray-100 text-gray-800';
@@ -25,7 +24,7 @@ const Navbar = () => {
 
   const getRoleLabel = (role) => {
     switch(role) {
-      case 'admin': return 'Administrateur';
+      case 'administrateur': return 'Administrateur';
       case 'enseignant': return 'Enseignant';
       case 'parent': return 'Parent';
       default: return 'Utilisateur';
@@ -115,7 +114,7 @@ const Navbar = () => {
                     <User className="w-4 h-4 text-white" />
                   </div>
                   <div className="text-left hidden md:block">
-                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{user?.nom}</div>
                     <div className={`text-xs px-2 py-1 rounded-full ${getRoleColor(user?.role)}`}>
                       {getRoleLabel(user?.role)}
                     </div>
@@ -128,7 +127,7 @@ const Navbar = () => {
               {showUserMenu && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
                   <div className="p-3 border-b border-gray-200">
-                    <div className="text-sm font-medium text-gray-900">{user?.name}</div>
+                    <div className="text-sm font-medium text-gray-900">{user?.nom}</div>
                     <div className="text-sm text-gray-500">{user?.email}</div>
                   </div>
                   

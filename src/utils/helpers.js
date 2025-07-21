@@ -1,141 +1,427 @@
-// Utilitaires de formatage et helpers pour l'application
+/**
+ * Utilitaires pour le formatage et la manipulation des données
+ */
 
 /**
  * Formatage des dates
  */
-export const formatDate = (date, format = 'short') => {
+export const formatDate = (date, options = {}) => {
   if (!date) return '';
   
-  const d = new Date(date);
-  if (isNaN(d.getTime())) return '';
+  const {
+    locale = 'fr-FR',
+    format = 'full' // 'full', 'short', 'medium', 'custom'
+  } = options;
 
-  const options = {
-    short: { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit' 
-    },
-    long: { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    },
-    datetime: { 
-      year: 'numeric', 
-      month: '2-digit', 
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    },
-    time: {
-      hour: '2-digit',
-      minute: '2-digit'
-    }
-  };
+  const dateObj = new Date(date);
+  
+  if (isNaN(dateObj.getTime())) return '';
 
-  return d.toLocaleDateString('fr-FR', options[format] || options.short);
+  switch (format) {
+    case 'full':
+      return dateObj.toLocaleDateString(locale, {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    
+    case 'short':
+      return dateObj.toLocaleDateString(locale);
+    
+    case 'medium':
+      return dateObj.toLocaleDateString(locale, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    
+    case 'time':
+      return dateObj.toLocaleTimeString(locale, {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    
+    case 'datetime':
+      return `${formatDate(date, { format: 'short' })} ${formatDate(date, { format: 'time' })}`;
+    
+    default:
+      return dateObj.toLocaleDateString(locale);
+  }
 };
 
 /**
- * Formatage des notes et moyennes
+ * Formatage des notes
  */
-export const formatGrade = (grade, precision = 2) => {
-  if (grade === null || grade === undefined || grade === '') return 'N/A';
-  const num = parseFloat(grade);
-  if (isNaN(num)) return 'N/A';
-  return `${num.toFixed(precision)}/20`;
+export const formatGrade = (grade, options = {}) => {
+  const {
+    precision = 1,
+    showOutOf = true,
+    outOf = 20,
+    showCoefficient = false,
+    coefficient = null
+  } = options;
+
+  if (grade === null || grade === undefined) return 'N/A';
+
+  const formattedGrade = parseFloat(grade).toFixed(precision);
+  let result = formattedGrade;
+
+  if (showOutOf) {
+    result += `/${outOf}`;
+  }
+
+  if (showCoefficient && coefficient) {
+    result += ` (coef. ${coefficient})`;
+  }
+
+  return result;
 };
 
 /**
- * Calcul de la mention selon la moyenne
+ * Calcul de moyennes
  */
-export const getMention = (moyenne) => {
-  const moy = parseFloat(moyenne);
-  if (isNaN(moy)) return 'N/A';
+export const calculateAverage = (grades, options = {}) => {
+  const {
+    useCoefficients = true,
+    precision = 2,
+    excludeNull = true
+  } = options;
+
+  if (!grades || grades.length === 0) return null;
+
+  let filteredGrades = grades;
   
-  if (moy >= 16) return { text: "Très Bien", color: "text-green-600", bg: "bg-green-100" };
-  if (moy >= 14) return { text: "Bien", color: "text-blue-600", bg: "bg-blue-100" };
-  if (moy >= 12) return { text: "Assez Bien", color: "text-yellow-600", bg: "bg-yellow-100" };
-  if (moy >= 10) return { text: "Passable", color: "text-orange-600", bg: "bg-orange-100" };
-  return { text: "Insuffisant", color: "text-red-600", bg: "bg-red-100" };
+  if (excludeNull) {
+    filteredGrades = grades.filter(g => g.note !== null && g.note !== undefined);
+  }
+
+  if (filteredGrades.length === 0) return null;
+
+  if (useCoefficients) {
+    const totalPoints = filteredGrades.reduce((sum, grade) => {
+      const note = parseFloat(grade.note) || 0;
+      const coef = parseFloat(grade.coefficient) || 1;
+      return sum + (note * coef);
+    }, 0);
+
+    const totalCoefficients = filteredGrades.reduce((sum, grade) => {
+      const coef = parseFloat(grade.coefficient) || 1;
+      return sum + coef;
+    }, 0);
+
+    return totalCoefficients > 0 ? (totalPoints / totalCoefficients).toFixed(precision) : null;
+  } else {
+    const total = filteredGrades.reduce((sum, grade) => sum + (parseFloat(grade.note) || 0), 0);
+    return (total / filteredGrades.length).toFixed(precision);
+  }
 };
 
 /**
- * Formatage des tailles de fichiers
+ * Formatage des noms complets
  */
-export const formatFileSize = (bytes) => {
-  if (!bytes || bytes === 0) return '0 B';
-  
-  const k = 1024;
-  const sizes = ['B', 'KB', 'MB', 'GB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  
-  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+export const formatFullName = (person, options = {}) => {
+  const {
+    format = 'first_last', // 'first_last', 'last_first', 'initials'
+    uppercase = false
+  } = options;
+
+  if (!person) return '';
+
+  const { nom = '', prenom = '' } = person;
+  let result = '';
+
+  switch (format) {
+    case 'first_last':
+      result = `${prenom} ${nom}`.trim();
+      break;
+    
+    case 'last_first':
+      result = `${nom}, ${prenom}`.trim();
+      break;
+    
+    case 'initials':
+      const firstInitial = prenom.charAt(0).toUpperCase();
+      const lastInitial = nom.charAt(0).toUpperCase();
+      result = `${firstInitial}.${lastInitial}.`;
+      break;
+    
+    default:
+      result = `${prenom} ${nom}`.trim();
+  }
+
+  return uppercase ? result.toUpperCase() : result;
 };
 
 /**
  * Formatage des numéros de téléphone
  */
-export const formatPhone = (phone) => {
+export const formatPhoneNumber = (phone, format = 'dots') => {
   if (!phone) return '';
   
   // Supprimer tous les caractères non numériques
   const cleaned = phone.replace(/\D/g, '');
   
-  // Format sénégalais : +221 XX XXX XX XX ou 0X XXX XX XX
-  if (cleaned.length === 9) {
-    return cleaned.replace(/(\d{2})(\d{3})(\d{2})(\d{2})/, '$1 $2 $3 $4');
+  // Vérifier que c'est un numéro français (10 chiffres)
+  if (cleaned.length !== 10) return phone;
+
+  switch (format) {
+    case 'dots':
+      return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1.$2.$3.$4.$5');
+    
+    case 'spaces':
+      return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1 $2 $3 $4 $5');
+    
+    case 'dashes':
+      return cleaned.replace(/(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/, '$1-$2-$3-$4-$5');
+    
+    default:
+      return cleaned;
+  }
+};
+
+/**
+ * Statistiques sur un ensemble de notes
+ */
+export const calculateGradeStats = (grades) => {
+  if (!grades || grades.length === 0) {
+    return {
+      count: 0,
+      average: null,
+      min: null,
+      max: null,
+      median: null,
+      standardDeviation: null
+    };
+  }
+
+  const validGrades = grades
+    .map(g => parseFloat(g.note))
+    .filter(note => !isNaN(note))
+    .sort((a, b) => a - b);
+
+  if (validGrades.length === 0) {
+    return {
+      count: 0,
+      average: null,
+      min: null,
+      max: null,
+      median: null,
+      standardDeviation: null
+    };
+  }
+
+  const sum = validGrades.reduce((acc, note) => acc + note, 0);
+  const average = sum / validGrades.length;
+  
+  const median = validGrades.length % 2 === 0
+    ? (validGrades[validGrades.length / 2 - 1] + validGrades[validGrades.length / 2]) / 2
+    : validGrades[Math.floor(validGrades.length / 2)];
+
+  const variance = validGrades.reduce((acc, note) => acc + Math.pow(note - average, 2), 0) / validGrades.length;
+  const standardDeviation = Math.sqrt(variance);
+
+  return {
+    count: validGrades.length,
+    average: parseFloat(average.toFixed(2)),
+    min: validGrades[0],
+    max: validGrades[validGrades.length - 1],
+    median: parseFloat(median.toFixed(2)),
+    standardDeviation: parseFloat(standardDeviation.toFixed(2))
+  };
+};
+
+/**
+ * Grouper des éléments par critère
+ */
+export const groupBy = (array, key) => {
+  return array.reduce((groups, item) => {
+    const group = getNestedValue(item, key);
+    if (!groups[group]) {
+      groups[group] = [];
+    }
+    groups[group].push(item);
+    return groups;
+  }, {});
+};
+
+/**
+ * Obtenir une valeur imbriquée dans un objet
+ */
+export const getNestedValue = (obj, path) => {
+  return path.split('.').reduce((current, key) => current?.[key], obj);
+};
+
+/**
+ * Tri intelligent des tableaux
+ */
+export const smartSort = (array, sortKey, direction = 'asc') => {
+  return [...array].sort((a, b) => {
+    const aValue = getNestedValue(a, sortKey);
+    const bValue = getNestedValue(b, sortKey);
+
+    // Gestion des valeurs nulles/undefined
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return direction === 'asc' ? 1 : -1;
+    if (bValue == null) return direction === 'asc' ? -1 : 1;
+
+    // Tri numérique
+    if (typeof aValue === 'number' && typeof bValue === 'number') {
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    // Tri par date
+    if (aValue instanceof Date && bValue instanceof Date) {
+      return direction === 'asc' ? aValue - bValue : bValue - aValue;
+    }
+
+    // Tri alphabétique (insensible à la casse)
+    const aStr = String(aValue).toLowerCase();
+    const bStr = String(bValue).toLowerCase();
+    
+    if (direction === 'asc') {
+      return aStr.localeCompare(bStr, 'fr', { numeric: true });
+    } else {
+      return bStr.localeCompare(aStr, 'fr', { numeric: true });
+    }
+  });
+};
+
+/**
+ * Formatage des tailles de fichier
+ */
+export const formatFileSize = (bytes) => {
+  if (!bytes) return '0 B';
+  
+  const sizes = ['B', 'KB', 'MB', 'GB'];
+  const i = Math.floor(Math.log(bytes) / Math.log(1024));
+  
+  return `${(bytes / Math.pow(1024, i)).toFixed(1)} ${sizes[i]}`;
+};
+
+/**
+ * Génération de couleurs pour les graphiques
+ */
+export const generateColors = (count, options = {}) => {
+  const { opacity = 1, hueStart = 0, saturation = 70, lightness = 50 } = options;
+  
+  const colors = [];
+  const hueStep = 360 / count;
+  
+  for (let i = 0; i < count; i++) {
+    const hue = (hueStart + i * hueStep) % 360;
+    colors.push(`hsla(${hue}, ${saturation}%, ${lightness}%, ${opacity})`);
   }
   
-  if (cleaned.length === 12 && cleaned.startsWith('221')) {
-    return `+${cleaned.slice(0, 3)} ${cleaned.slice(3, 5)} ${cleaned.slice(5, 8)} ${cleaned.slice(8, 10)} ${cleaned.slice(10)}`;
-  }
-  
-  return phone;
+  return colors;
 };
 
 /**
- * Génération d'initiales à partir d'un nom complet
+ * Debounce pour les recherches
  */
-export const getInitials = (firstName, lastName) => {
-  const first = firstName ? firstName.charAt(0).toUpperCase() : '';
-  const last = lastName ? lastName.charAt(0).toUpperCase() : '';
-  return `${first}${last}`;
+export const debounce = (func, wait) => {
+  let timeout;
+  return (...args) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
 };
 
 /**
- * Validation d'email
+ * Pagination des données
  */
-export const isValidEmail = (email) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return emailRegex.test(email);
+export const paginate = (array, page, itemsPerPage) => {
+  const startIndex = (page - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  
+  return {
+    items: array.slice(startIndex, endIndex),
+    totalItems: array.length,
+    totalPages: Math.ceil(array.length / itemsPerPage),
+    currentPage: page,
+    hasNextPage: endIndex < array.length,
+    hasPrevPage: page > 1
+  };
 };
 
 /**
- * Génération de couleurs pour les avatars
+ * Recherche floue dans un tableau
  */
-export const getAvatarColor = (name) => {
-  const colors = [
-    'bg-red-500',
-    'bg-blue-500',
-    'bg-green-500',
-    'bg-yellow-500',
-    'bg-purple-500',
-    'bg-pink-500',
-    'bg-indigo-500',
-    'bg-gray-500'
-  ];
+export const fuzzySearch = (array, searchTerm, searchFields) => {
+  if (!searchTerm) return array;
   
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  const term = searchTerm.toLowerCase().trim();
   
-  return colors[Math.abs(hash) % colors.length];
+  return array.filter(item => {
+    return searchFields.some(field => {
+      const value = getNestedValue(item, field);
+      if (!value) return false;
+      
+      return String(value).toLowerCase().includes(term);
+    });
+  });
 };
 
 /**
- * Calcul de l'âge à partir de la date de naissance
+ * Conversion d'objets en CSV
+ */
+export const objectsToCSV = (objects, delimiter = ',') => {
+  if (!objects || objects.length === 0) return '';
+  
+  const headers = Object.keys(objects[0]);
+  const csvHeaders = headers.join(delimiter);
+  
+  const csvRows = objects.map(obj => {
+    return headers.map(header => {
+      const value = obj[header];
+      // Échapper les guillemets et ajouter des guillemets si nécessaire
+      if (value && typeof value === 'string' && (value.includes(delimiter) || value.includes('"') || value.includes('\n'))) {
+        return `"${value.replace(/"/g, '""')}"`;
+      }
+      return value || '';
+    }).join(delimiter);
+  });
+  
+  return [csvHeaders, ...csvRows].join('\n');
+};
+
+/**
+ * Téléchargement de fichier
+ */
+export const downloadFile = (content, filename, contentType = 'text/plain') => {
+  const blob = new Blob([content], { type: contentType });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  
+  link.href = url;
+  link.download = filename;
+  link.style.display = 'none';
+  
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  
+  window.URL.revokeObjectURL(url);
+};
+
+/**
+ * Formatage des adresses
+ */
+export const formatAddress = (address) => {
+  if (!address) return '';
+  
+  const parts = [
+    address.numero,
+    address.rue,
+    address.ville,
+    address.code_postal
+  ].filter(Boolean);
+  
+  return parts.join(', ');
+};
+
+/**
+ * Calcul d'âge à partir d'une date de naissance
  */
 export const calculateAge = (birthDate) => {
   if (!birthDate) return null;
@@ -156,6 +442,15 @@ export const calculateAge = (birthDate) => {
 };
 
 /**
+ * Génération d'identifiants uniques
+ */
+export const generateId = (prefix = '') => {
+  const timestamp = Date.now().toString(36);
+  const random = Math.random().toString(36).substr(2, 5);
+  return `${prefix}${timestamp}_${random}`;
+};
+
+/**
  * Capitalisation de la première lettre
  */
 export const capitalize = (str) => {
@@ -164,264 +459,9 @@ export const capitalize = (str) => {
 };
 
 /**
- * Formatage du nom complet
+ * Raccourcissement de texte avec ellipses
  */
-export const formatFullName = (firstName, lastName, format = 'normal') => {
-  const first = capitalize(firstName || '');
-  const last = (lastName || '').toUpperCase();
-  
-  switch (format) {
-    case 'lastFirst':
-      return `${last} ${first}`.trim();
-    case 'initialsLast':
-      return `${first.charAt(0)}. ${last}`.trim();
-    default:
-      return `${first} ${last}`.trim();
-  }
-};
-
-/**
- * Génération d'identifiant unique simple
- */
-export const generateId = (prefix = '') => {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substr(2, 5);
-  return `${prefix}${timestamp}${random}`;
-};
-
-/**
- * Debounce function pour optimiser les recherches
- */
-export const debounce = (func, wait) => {
-  let timeout;
-  return function executedFunction(...args) {
-    const later = () => {
-      clearTimeout(timeout);
-      func(...args);
-    };
-    clearTimeout(timeout);
-    timeout = setTimeout(later, wait);
-  };
-};
-
-/**
- * Validation des mots de passe
- */
-export const validatePassword = (password) => {
-  const errors = [];
-  
-  if (!password) {
-    errors.push('Le mot de passe est requis');
-    return errors;
-  }
-  
-  if (password.length < 6) {
-    errors.push('Le mot de passe doit contenir au moins 6 caractères');
-  }
-  
-  if (!/[A-Z]/.test(password)) {
-    errors.push('Le mot de passe doit contenir au moins une majuscule');
-  }
-  
-  if (!/[0-9]/.test(password)) {
-    errors.push('Le mot de passe doit contenir au moins un chiffre');
-  }
-  
-  return errors;
-};
-
-/**
- * Formatage des durées (en minutes vers heures/minutes)
- */
-export const formatDuration = (minutes) => {
-  if (!minutes || minutes < 0) return '0 min';
-  
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  
-  if (hours === 0) return `${mins} min`;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}min`;
-};
-
-/**
- * Conversion de notes en pourcentage
- */
-export const gradeToPercentage = (grade, maxGrade = 20) => {
-  if (!grade || !maxGrade) return 0;
-  return Math.round((parseFloat(grade) / maxGrade) * 100);
-};
-
-/**
- * Génération de suggestions d'appréciations
- */
-export const getAppreciationSuggestions = (grade) => {
-  const suggestions = {
-    excellent: [
-      "Excellent travail, continuez ainsi !",
-      "Très bonne maîtrise du sujet",
-      "Félicitations pour ce résultat remarquable",
-      "Travail exemplaire, bravo !"
-    ],
-    good: [
-      "Bon travail, continuez vos efforts",
-      "Bonne progression, persévérez",
-      "Résultat satisfaisant, peut encore mieux faire",
-      "Travail correct, maintenez ce niveau"
-    ],
-    average: [
-      "Travail moyen, des efforts sont nécessaires",
-      "Doit approfondir ses connaissances",
-      "Peut mieux faire avec plus de travail",
-      "Résultat mitigé, concentration requise"
-    ],
-    poor: [
-      "Travail insuffisant, besoin d'aide",
-      "Grandes difficultés, soutien nécessaire",
-      "Doit revoir les bases fondamentales",
-      "Travail très insuffisant, efforts urgents requis"
-    ]
-  };
-
-  const gradeValue = parseFloat(grade);
-  
-  if (gradeValue >= 16) return suggestions.excellent;
-  if (gradeValue >= 12) return suggestions.good;
-  if (gradeValue >= 8) return suggestions.average;
-  return suggestions.poor;
-};
-
-/**
- * Tri intelligent des données
- */
-export const smartSort = (data, key, direction = 'asc') => {
-  return [...data].sort((a, b) => {
-    const aVal = getNestedValue(a, key);
-    const bVal = getNestedValue(b, key);
-    
-    // Gestion des valeurs nulles/undefined
-    if (aVal == null && bVal == null) return 0;
-    if (aVal == null) return direction === 'asc' ? 1 : -1;
-    if (bVal == null) return direction === 'asc' ? -1 : 1;
-    
-    // Tri numérique
-    if (typeof aVal === 'number' && typeof bVal === 'number') {
-      return direction === 'asc' ? aVal - bVal : bVal - aVal;
-    }
-    
-    // Tri des dates
-    if (aVal instanceof Date && bVal instanceof Date) {
-      return direction === 'asc' ? aVal - bVal : bVal - aVal;
-    }
-    
-    // Tri alphabétique
-    const aStr = aVal.toString().toLowerCase();
-    const bStr = bVal.toString().toLowerCase();
-    
-    if (direction === 'asc') {
-      return aStr.localeCompare(bStr, 'fr');
-    } else {
-      return bStr.localeCompare(aStr, 'fr');
-    }
-  });
-};
-
-/**
- * Accès aux propriétés imbriquées d'un objet
- */
-export const getNestedValue = (obj, path) => {
-  return path.split('.').reduce((current, key) => current?.[key], obj);
-};
-
-/**
- * Exportation en CSV
- */
-export const exportToCSV = (data, filename = 'export.csv', columns = []) => {
-  if (!data || data.length === 0) {
-    alert('Aucune donnée à exporter');
-    return;
-  }
-
-  // Utiliser les colonnes spécifiées ou toutes les clés du premier objet
-  const headers = columns.length > 0 
-    ? columns 
-    : Object.keys(data[0]);
-
-  // Créer le contenu CSV
-  const csvContent = [
-    headers.join(','), // En-têtes
-    ...data.map(row => 
-      headers.map(header => {
-        const value = getNestedValue(row, header) || '';
-        // Échapper les guillemets et entourer de guillemets si nécessaire
-        return `"${value.toString().replace(/"/g, '""')}"`;
-      }).join(',')
-    )
-  ].join('\n');
-
-  // Créer et télécharger le fichier
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
-  
-  if (link.download !== undefined) {
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  }
-};
-
-/**
- * Utilitaires pour les statistiques
- */
-export const calculateStats = (numbers) => {
-  if (!numbers || numbers.length === 0) {
-    return { count: 0, sum: 0, average: 0, min: 0, max: 0 };
-  }
-
-  const validNumbers = numbers.filter(n => typeof n === 'number' && !isNaN(n));
-  
-  if (validNumbers.length === 0) {
-    return { count: 0, sum: 0, average: 0, min: 0, max: 0 };
-  }
-
-  const sum = validNumbers.reduce((acc, num) => acc + num, 0);
-  const average = sum / validNumbers.length;
-  const min = Math.min(...validNumbers);
-  const max = Math.max(...validNumbers);
-
-  return {
-    count: validNumbers.length,
-    sum,
-    average: Math.round(average * 100) / 100,
-    min,
-    max
-  };
-};
-
-export default {
-  formatDate,
-  formatGrade,
-  getMention,
-  formatFileSize,
-  formatPhone,
-  getInitials,
-  isValidEmail,
-  getAvatarColor,
-  calculateAge,
-  capitalize,
-  formatFullName,
-  generateId,
-  debounce,
-  validatePassword,
-  formatDuration,
-  gradeToPercentage,
-  getAppreciationSuggestions,
-  smartSort,
-  getNestedValue,
-  exportToCSV,
-  calculateStats
+export const truncate = (text, maxLength, suffix = '...') => {
+  if (!text || text.length <= maxLength) return text;
+  return text.substring(0, maxLength) + suffix;
 };

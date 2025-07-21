@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiService } from '../services/apiService';
+import { authService, setupAPIInterceptors } from '../services/index';
 
 // Hook pour gérer les données avec CRUD
 export const useDataManager = (endpoint, dependencies = []) => {
@@ -331,6 +332,124 @@ export const useLocalStorage = (key, initialValue) => {
   return [storedValue, setValue, removeValue];
 };
 
+// Hook pour l'authentification
+export const useAuth = () => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Initialisation de l'authentification
+  useEffect(() => {
+    const initAuth = async () => {
+      try {
+        setLoading(true);
+        
+        // Configurer les intercepteurs API
+        setupAPIInterceptors();
+        
+        // Vérifier si l'utilisateur est déjà connecté
+        if (authService.isAuthenticated()) {
+          const profile = await authService.getProfile();
+          setUser(profile.data || profile);
+          setIsAuthenticated(true);
+        }
+      } catch (error) {
+        console.error('Erreur initialisation auth:', error);
+        // En cas d'erreur, déconnecter l'utilisateur
+        authService.logout();
+        setUser(null);
+        setIsAuthenticated(false);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    initAuth();
+  }, []);
+
+  // Connexion
+  const login = useCallback(async (credentials) => {
+    try {
+      setLoading(true);
+      const response = await authService.login(credentials);
+      
+      if (response.user) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+      }
+      
+      return response;
+    } catch (error) {
+      console.error('Erreur login:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Inscription
+  const register = useCallback(async (userData) => {
+    try {
+      setLoading(true);
+      const response = await authService.register(userData);
+      return response;
+    } catch (error) {
+      console.error('Erreur register:', error);
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Déconnexion
+  const logout = useCallback(async () => {
+    try {
+      await authService.logout();
+    } catch (error) {
+      console.error('Erreur logout:', error);
+    } finally {
+      setUser(null);
+      setIsAuthenticated(false);
+    }
+  }, []);
+
+  // Changement de mot de passe
+  const changePassword = useCallback(async (passwordData) => {
+    try {
+      const response = await authService.changePassword(passwordData);
+      return response;
+    } catch (error) {
+      console.error('Erreur changement mot de passe:', error);
+      throw error;
+    }
+  }, []);
+
+  // Rafraîchir le profil utilisateur
+  const refreshProfile = useCallback(async () => {
+    try {
+      if (isAuthenticated) {
+        const profile = await authService.getProfile();
+        setUser(profile.data || profile);
+      }
+    } catch (error) {
+      console.error('Erreur refresh profile:', error);
+      // En cas d'erreur, déconnecter l'utilisateur
+      logout();
+    }
+  }, [isAuthenticated]);
+
+  return {
+    user,
+    loading,
+    isAuthenticated,
+    login,
+    register,
+    logout,
+    changePassword,
+    refreshProfile
+  };
+};
+
 // Fonction utilitaire pour accéder aux propriétés imbriquées
 const getNestedValue = (obj, path) => {
   return path.split('.').reduce((current, key) => current?.[key], obj);
@@ -343,5 +462,6 @@ export default {
   useModal,
   useToast,
   useStats,
-  useLocalStorage
+  useLocalStorage,
+  useAuth
 };

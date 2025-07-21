@@ -1,5 +1,6 @@
 import React from 'react';
 import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
+import TableWithAdvancedScroll from './TableWithAdvancedScroll';
 
 // Composant Card uniforme
 export const Card = ({ 
@@ -50,13 +51,30 @@ export const Badge = ({
   );
 };
 
-// Composant Table uniforme
-export const Table = ({ columns, data, actions = [] }) => {
+// Composant Table uniforme avec scroll amélioré
+export const Table = ({ 
+  columns, 
+  data, 
+  actions = [], 
+  maxHeight = '500px', 
+  stickyHeader = true,
+  showScrollIndicator = true 
+}) => {
   return (
-    <div className="overflow-hidden rounded-lg border border-gray-200">
-      <div className="overflow-x-auto">
+    <div className="overflow-hidden rounded-lg border border-gray-200 relative">
+      {/* Indicateur de scroll si nécessaire */}
+      {showScrollIndicator && data.length > 10 && (
+        <div className="absolute top-2 right-2 z-10 bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs font-medium">
+          {data.length} éléments
+        </div>
+      )}
+      
+      <div 
+        className="overflow-auto scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100 hover:scrollbar-thumb-gray-400"
+        style={{ maxHeight }}
+      >
         <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+          <thead className={`bg-gray-50 ${stickyHeader ? 'sticky top-0 z-10' : ''}`}>
             <tr>
               {columns.map((column, index) => (
                 <th
@@ -67,7 +85,7 @@ export const Table = ({ columns, data, actions = [] }) => {
                 </th>
               ))}
               {actions.length > 0 && (
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider sticky right-0 bg-gray-50">
                   Actions
                 </th>
               )}
@@ -82,7 +100,7 @@ export const Table = ({ columns, data, actions = [] }) => {
                   </td>
                 ))}
                 {actions.length > 0 && (
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium sticky right-0 bg-white">
                     <div className="flex items-center justify-end space-x-2">
                       {actions.map((action, actionIndex) => (
                         <button
@@ -185,3 +203,6 @@ export const EmptyState = ({
     </div>
   );
 };
+
+// Export du composant table avancé
+export { TableWithAdvancedScroll };
