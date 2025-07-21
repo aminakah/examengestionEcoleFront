@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, Edit, Trash2, Clock, Users } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, Clock, Users, Eye } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitial } from '../utils/formatters';
+import Modal from '../components/Modal';
+import MatiereForm from '../components/MatiereForm';
+import MatiereDetailsModal from '../components/MatiereDetailsModal';
 
 const GestionMatieres = () => {
   const [matieres, setMatieres] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingMatiere, setEditingMatiere] = useState(null);
+  const [selectedMatiere, setSelectedMatiere] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    nom: '',
-    code: '',
-    coefficient: 1,
-    couleur: '#3B82F6',
-    description: ''
-  });
 
   useEffect(() => {
     loadMatieres();
@@ -34,15 +32,7 @@ const GestionMatieres = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (formData) => {
     try {
       if (editingMatiere) {
         const response = await apiService.put(`/matieres/${editingMatiere.id}`, formData);
@@ -53,24 +43,38 @@ const GestionMatieres = () => {
         const response = await apiService.post('/matieres', formData);
         setMatieres([...matieres, response.data]);
       }
-      resetForm();
+      closeModal();
       alert(editingMatiere ? 'Matière modifiée avec succès!' : 'Matière ajoutée avec succès!');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de la matière');
+      throw error; // Re-throw pour gérer le loading dans le form
     }
   };
 
   const handleEdit = (matiere) => {
     setEditingMatiere(matiere);
-    setFormData({
-      nom: matiere.nom,
-      code: matiere.code,
-      coefficient: matiere.coefficient,
-      couleur: matiere.couleur || '#3B82F6',
-      description: matiere.description || ''
-    });
-    setShowForm(true);
+    setShowModal(true);
+  };
+
+  const handleViewDetails = (matiere) => {
+    setSelectedMatiere(matiere);
+    setShowDetailsModal(true);
+  };
+
+  const openAddModal = () => {
+    setEditingMatiere(null);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setEditingMatiere(null);
+    setShowModal(false);
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedMatiere(null);
+    setShowDetailsModal(false);
   };
 
   const handleDelete = async (matiere) => {
@@ -86,17 +90,7 @@ const GestionMatieres = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      nom: '',
-      code: '',
-      coefficient: 1,
-      couleur: '#3B82F6',
-      description: ''
-    });
-    setEditingMatiere(null);
-    setShowForm(false);
-  };
+
 
   const filteredMatieres = matieres.filter(matiere =>
     matiere.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -154,6 +148,12 @@ const GestionMatieres = () => {
 
   const actions = [
     {
+      icon: Eye,
+      label: 'Voir détails',
+      onClick: handleViewDetails,
+      variant: 'default'
+    },
+    {
       icon: Edit,
       label: 'Modifier',
       onClick: handleEdit,
@@ -171,7 +171,7 @@ const GestionMatieres = () => {
     {
       label: 'Ajouter une matière',
       icon: Plus,
-      onClick: () => setShowForm(true),
+      onClick: openAddModal,
       variant: 'primary'
     }
   ];
@@ -181,12 +181,6 @@ const GestionMatieres = () => {
   const coefficientMoyen = totalMatieres > 0 
     ? Math.round((matieres.reduce((sum, m) => sum + m.coefficient, 0) / totalMatieres) * 10) / 10 
     : 0;
-
-  // Couleurs prédéfinies
-  const couleursPredefinies = [
-    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
-    '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'
-  ];
 
   if (loading) {
     return (
@@ -217,7 +211,7 @@ const GestionMatieres = () => {
           title="Coefficient Moyen"
           value={coefficientMoyen}
           icon={Clock}
-          color="orange"
+          color="indigo"
           trend="Équilibré"
         />
         <StatsCard
@@ -229,125 +223,27 @@ const GestionMatieres = () => {
         />
       </div>
 
-      {/* Formulaire d'ajout/modification */}
-      {showForm && (
-        <Card 
-          title={editingMatiere ? 'Modifier la matière' : 'Ajouter une nouvelle matière'} 
-          className="mb-6"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom de la matière *
-                  </label>
-                  <input
-                    type="text"
-                    name="nom"
-                    value={formData.nom}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Ex: Mathématiques, Français..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Code matière *
-                  </label>
-                  <input
-                    type="text"
-                    name="code"
-                    value={formData.code}
-                    onChange={handleInputChange}
-                    required
-                    placeholder="Ex: MATH, FR, ANG..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Coefficient *
-                  </label>
-                  <input
-                    type="number"
-                    name="coefficient"
-                    value={formData.coefficient}
-                    onChange={handleInputChange}
-                    min="1"
-                    max="10"
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Couleur de la matière
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    {couleursPredefinies.map(couleur => (
-                      <button
-                        key={couleur}
-                        type="button"
-                        onClick={() => setFormData({...formData, couleur})}
-                        className={`w-8 h-8 rounded-full border-2 transition-all ${
-                          formData.couleur === couleur 
-                            ? 'border-gray-800 scale-110' 
-                            : 'border-gray-300 hover:scale-105'
-                        }`}
-                        style={{ backgroundColor: couleur }}
-                      />
-                    ))}
-                  </div>
-                  <input
-                    type="color"
-                    name="couleur"
-                    value={formData.couleur}
-                    onChange={handleInputChange}
-                    className="w-full h-10 border border-gray-300 rounded-lg"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description
-                  </label>
-                  <textarea
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                    rows={4}
-                    placeholder="Description de la matière..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
+      {/* Modal pour le formulaire */}
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingMatiere ? 'Modifier la matière' : 'Ajouter une nouvelle matière'}
+        size="lg"
+      >
+        <MatiereForm
+          onSubmit={handleSubmit}
+          onCancel={closeModal}
+          initialData={editingMatiere}
+          isEditing={!!editingMatiere}
+        />
+      </Modal>
 
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
-              >
-                {editingMatiere ? 'Modifier' : 'Ajouter'}
-              </button>
-            </div>
-          </form>
-        </Card>
-      )}
+      {/* Modal pour les détails */}
+      <MatiereDetailsModal
+        isOpen={showDetailsModal}
+        onClose={closeDetailsModal}
+        matiere={selectedMatiere}
+      />
 
       {/* Liste des matières */}
       <Card title="Liste des matières">
@@ -356,7 +252,7 @@ const GestionMatieres = () => {
             title="Aucune matière trouvée"
             description="Commencez par ajouter des matières à votre programme scolaire."
             icon={BookOpen}
-            action={() => setShowForm(true)}
+            action={openAddModal}
             actionLabel="Ajouter une matière"
           />
         ) : (

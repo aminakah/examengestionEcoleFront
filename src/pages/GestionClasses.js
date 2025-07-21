@@ -1,23 +1,21 @@
 import React, { useState, useEffect } from 'react';
-import { School, Plus, Edit, Trash2, Users, BookOpen } from 'lucide-react';
+import { School, Plus, Edit, Trash2, Users, BookOpen, Eye } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitial } from '../utils/formatters';
+import Modal from '../components/Modal';
+import ClasseForm from '../components/ClasseForm';
+import ClasseDetailsModal from '../components/ClasseDetailsModal';
 
 const GestionClasses = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingClasse, setEditingClasse] = useState(null);
+  const [selectedClasse, setSelectedClasse] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    nom: '',
-    niveau: '',
-    effectif: 0
-  });
-
-  const niveaux = ['6ème', '5ème', '4ème', '3ème'];
 
   useEffect(() => {
     loadClasses();
@@ -34,15 +32,7 @@ const GestionClasses = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (formData) => {
     try {
       if (editingClasse) {
         const response = await apiService.put(`/classes/${editingClasse.id}`, formData);
@@ -53,22 +43,38 @@ const GestionClasses = () => {
         const response = await apiService.post('/classes', formData);
         setClasses([...classes, response.data]);
       }
-      resetForm();
+      closeModal();
       alert(editingClasse ? 'Classe modifiée avec succès!' : 'Classe ajoutée avec succès!');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de la classe');
+      throw error; // Re-throw pour gérer le loading dans le form
     }
   };
 
   const handleEdit = (classe) => {
     setEditingClasse(classe);
-    setFormData({
-      nom: classe.nom,
-      niveau: classe.niveau,
-      effectif: classe.effectif
-    });
-    setShowForm(true);
+    setShowModal(true);
+  };
+
+  const handleViewDetails = (classe) => {
+    setSelectedClasse(classe);
+    setShowDetailsModal(true);
+  };
+
+  const openAddModal = () => {
+    setEditingClasse(null);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setEditingClasse(null);
+    setShowModal(false);
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedClasse(null);
+    setShowDetailsModal(false);
   };
 
   const handleDelete = async (classe) => {
@@ -84,11 +90,7 @@ const GestionClasses = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({ nom: '', niveau: '', effectif: 0 });
-    setEditingClasse(null);
-    setShowForm(false);
-  };
+
 
   const filteredClasses = classes.filter(classe =>
     classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,7 +103,7 @@ const GestionClasses = () => {
       label: 'Nom de la classe',
       render: (value, row) => (
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
             {getInitial(value)}
           </div>
           <div>
@@ -132,6 +134,12 @@ const GestionClasses = () => {
 
   const actions = [
     {
+      icon: Eye,
+      label: 'Voir détails',
+      onClick: handleViewDetails,
+      variant: 'default'
+    },
+    {
       icon: Edit,
       label: 'Modifier',
       onClick: handleEdit,
@@ -149,7 +157,7 @@ const GestionClasses = () => {
     {
       label: 'Ajouter une classe',
       icon: Plus,
-      onClick: () => setShowForm(true),
+      onClick: openAddModal,
       variant: 'primary'
     }
   ];
@@ -182,102 +190,46 @@ const GestionClasses = () => {
           title="Total Classes"
           value={totalClasses}
           icon={School}
-          color="purple"
+          color="blue"
           trend={`+${Math.round((totalClasses / 10) * 100)}%`}
         />
         <StatsCard
           title="Total Élèves"
           value={totalEleves}
           icon={Users}
-          color="blue"
+          color="indigo"
           trend={`${moyenneEffectif} moy/classe`}
         />
         <StatsCard
           title="Effectif Moyen"
           value={moyenneEffectif}
           icon={BookOpen}
-          color="green"
+          color="purple"
           trend="Optimal"
         />
       </div>
 
-      {/* Formulaire d'ajout/modification */}
-      {showForm && (
-        <Card 
-          title={editingClasse ? 'Modifier la classe' : 'Ajouter une nouvelle classe'} 
-          className="mb-6"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nom de la classe *
-                </label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleInputChange}
-                  required
-                  placeholder="Ex: 6ème A, 5ème B..."
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Niveau *
-                </label>
-                <select
-                  name="niveau"
-                  value={formData.niveau}
-                  onChange={handleInputChange}
-                  required
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value="">Sélectionner un niveau</option>
-                  {niveaux.map(niveau => (
-                    <option key={niveau} value={niveau}>
-                      {niveau}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Effectif prévu
-                </label>
-                <input
-                  type="number"
-                  name="effectif"
-                  value={formData.effectif}
-                  onChange={handleInputChange}
-                  min="0"
-                  placeholder="30"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-              </div>
-            </div>
+      {/* Modal pour le formulaire */}
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingClasse ? 'Modifier la classe' : 'Ajouter une nouvelle classe'}
+        size="lg"
+      >
+        <ClasseForm
+          onSubmit={handleSubmit}
+          onCancel={closeModal}
+          initialData={editingClasse}
+          isEditing={!!editingClasse}
+        />
+      </Modal>
 
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
-              >
-                {editingClasse ? 'Modifier' : 'Ajouter'}
-              </button>
-            </div>
-          </form>
-        </Card>
-      )}
+      {/* Modal pour les détails */}
+      <ClasseDetailsModal
+        isOpen={showDetailsModal}
+        onClose={closeDetailsModal}
+        classe={selectedClasse}
+      />
 
       {/* Liste des classes */}
       <Card title="Liste des classes">
@@ -286,7 +238,7 @@ const GestionClasses = () => {
             title="Aucune classe trouvée"
             description="Commencez par créer des classes pour votre établissement."
             icon={School}
-            action={() => setShowForm(true)}
+            action={openAddModal}
             actionLabel="Ajouter une classe"
           />
         ) : (

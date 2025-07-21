@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Plus, Edit, Trash2, Mail, Phone, BookOpen, GraduationCap } from 'lucide-react';
+import { UserCheck, Plus, Edit, Trash2, Mail, Phone, BookOpen, GraduationCap, Eye } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
+import Modal from '../components/Modal';
+import EnseignantForm from '../components/EnseignantForm';
+import EnseignantDetailsModal from '../components/EnseignantDetailsModal';
 
 const GestionEnseignants = () => {
   const [enseignants, setEnseignants] = useState([]);
   const [matieres, setMatieres] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [editingEnseignant, setEditingEnseignant] = useState(null);
+  const [selectedEnseignant, setSelectedEnseignant] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [formData, setFormData] = useState({
-    nom: '',
-    prenom: '',
-    email: '',
-    telephone: '',
-    adresse: '',
-    matiere_id: '',
-    specialite: '',
-    date_embauche: ''
-  });
 
   useEffect(() => {
     loadData();
@@ -43,15 +38,7 @@ const GestionEnseignants = () => {
     }
   };
 
-  const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handleSubmit = async (formData) => {
     try {
       if (editingEnseignant) {
         const response = await apiService.put(`/enseignants/${editingEnseignant.id}`, formData);
@@ -62,27 +49,38 @@ const GestionEnseignants = () => {
         const response = await apiService.post('/enseignants', formData);
         setEnseignants([...enseignants, response.data]);
       }
-      resetForm();
+      closeModal();
       alert(editingEnseignant ? 'Enseignant modifié avec succès!' : 'Enseignant ajouté avec succès!');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de l\'enseignant');
+      throw error; // Re-throw pour gérer le loading dans le form
     }
   };
 
   const handleEdit = (enseignant) => {
     setEditingEnseignant(enseignant);
-    setFormData({
-      nom: enseignant.nom,
-      prenom: enseignant.prenom,
-      email: enseignant.email,
-      telephone: enseignant.telephone,
-      adresse: enseignant.adresse,
-      matiere_id: enseignant.matiere_id,
-      specialite: enseignant.specialite,
-      date_embauche: enseignant.date_embauche
-    });
-    setShowForm(true);
+    setShowModal(true);
+  };
+
+  const handleViewDetails = (enseignant) => {
+    setSelectedEnseignant(enseignant);
+    setShowDetailsModal(true);
+  };
+
+  const openAddModal = () => {
+    setEditingEnseignant(null);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setEditingEnseignant(null);
+    setShowModal(false);
+  };
+
+  const closeDetailsModal = () => {
+    setSelectedEnseignant(null);
+    setShowDetailsModal(false);
   };
 
   const handleDelete = async (enseignant) => {
@@ -98,20 +96,7 @@ const GestionEnseignants = () => {
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      nom: '',
-      prenom: '',
-      email: '',
-      telephone: '',
-      adresse: '',
-      matiere_id: '',
-      specialite: '',
-      date_embauche: ''
-    });
-    setEditingEnseignant(null);
-    setShowForm(false);
-  };
+
 
   const filteredEnseignants = enseignants.filter(enseignant =>
     enseignant.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -126,7 +111,7 @@ const GestionEnseignants = () => {
       label: 'Enseignant',
       render: (value, row) => (
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-green-500 to-green-600 rounded-full flex items-center justify-center text-white font-medium">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
             {getInitials(row.prenom, value)}
           </div>
           <div>
@@ -143,7 +128,7 @@ const GestionEnseignants = () => {
       key: 'matiere_nom',
       label: 'Matière',
       render: (value) => (
-        <Badge variant="success">{value}</Badge>
+        <Badge variant="info">{value}</Badge>
       )
     },
     {
@@ -172,6 +157,12 @@ const GestionEnseignants = () => {
 
   const actions = [
     {
+      icon: Eye,
+      label: 'Voir détails',
+      onClick: handleViewDetails,
+      variant: 'default'
+    },
+    {
       icon: Edit,
       label: 'Modifier',
       onClick: handleEdit,
@@ -189,7 +180,7 @@ const GestionEnseignants = () => {
     {
       label: 'Ajouter un enseignant',
       icon: Plus,
-      onClick: () => setShowForm(true),
+      onClick: openAddModal,
       variant: 'primary'
     }
   ];
@@ -221,13 +212,13 @@ const GestionEnseignants = () => {
           title="Total Enseignants"
           value={totalEnseignants}
           icon={UserCheck}
-          color="green"
+          color="blue"
         />
         <StatsCard
           title="Matières Enseignées"
           value={matieresEnseignees}
           icon={BookOpen}
-          color="blue"
+          color="indigo"
         />
         <StatsCard
           title="Qualification"
@@ -238,154 +229,28 @@ const GestionEnseignants = () => {
         />
       </div>
 
-      {/* Formulaire d'ajout/modification */}
-      {showForm && (
-        <Card 
-          title={editingEnseignant ? 'Modifier l\'enseignant' : 'Ajouter un nouvel enseignant'} 
-          className="mb-6"
-        >
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Informations personnelles */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">
-                  Informations personnelles
-                </h4>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Nom *
-                  </label>
-                  <input
-                    type="text"
-                    name="nom"
-                    value={formData.nom}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Prénom *
-                  </label>
-                  <input
-                    type="text"
-                    name="prenom"
-                    value={formData.prenom}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email *
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Téléphone
-                  </label>
-                  <input
-                    type="tel"
-                    name="telephone"
-                    value={formData.telephone}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Adresse
-                  </label>
-                  <textarea
-                    name="adresse"
-                    value={formData.adresse}
-                    onChange={handleInputChange}
-                    rows={3}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
+      {/* Modal pour le formulaire */}
+      <Modal
+        isOpen={showModal}
+        onClose={closeModal}
+        title={editingEnseignant ? 'Modifier l\'enseignant' : 'Ajouter un nouvel enseignant'}
+        size="lg"
+      >
+        <EnseignantForm
+          onSubmit={handleSubmit}
+          onCancel={closeModal}
+          matieres={matieres}
+          initialData={editingEnseignant}
+          isEditing={!!editingEnseignant}
+        />
+      </Modal>
 
-              {/* Informations professionnelles */}
-              <div className="space-y-4">
-                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">
-                  Informations professionnelles
-                </h4>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Matière enseignée *
-                  </label>
-                  <select
-                    name="matiere_id"
-                    value={formData.matiere_id}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Sélectionner une matière</option>
-                    {matieres.map(matiere => (
-                      <option key={matiere.id} value={matiere.id}>
-                        {matiere.nom}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Spécialité
-                  </label>
-                  <input
-                    type="text"
-                    name="specialite"
-                    value={formData.specialite}
-                    onChange={handleInputChange}
-                    placeholder="Ex: Algèbre, Littérature contemporaine..."
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Date d'embauche
-                  </label>
-                  <input
-                    type="date"
-                    name="date_embauche"
-                    value={formData.date_embauche}
-                    onChange={handleInputChange}
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 pt-6 border-t">
-              <button
-                type="button"
-                onClick={resetForm}
-                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
-              >
-                {editingEnseignant ? 'Modifier' : 'Ajouter'}
-              </button>
-            </div>
-          </form>
-        </Card>
-      )}
+      {/* Modal pour les détails */}
+      <EnseignantDetailsModal
+        isOpen={showDetailsModal}
+        onClose={closeDetailsModal}
+        enseignant={selectedEnseignant}
+      />
 
       {/* Liste des enseignants */}
       <Card title="Liste des enseignants">
@@ -394,7 +259,7 @@ const GestionEnseignants = () => {
             title="Aucun enseignant trouvé"
             description="Commencez par ajouter des enseignants à votre établissement."
             icon={UserCheck}
-            action={() => setShowForm(true)}
+            action={openAddModal}
             actionLabel="Ajouter un enseignant"
           />
         ) : (
