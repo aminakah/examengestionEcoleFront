@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
+import { Users, Plus, Edit, Trash2, Eye, Mail, Phone, MapPin } from 'lucide-react';
 import { apiService } from '../services/apiService';
+import PageLayout from '../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState } from '../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
 
 const GestionEleves = () => {
   const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingEleve, setEditingEleve] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     nom: '',
     prenom: '',
@@ -44,368 +50,360 @@ const GestionEleves = () => {
       ...formData,
       [e.target.name]: e.target.value
     });
-  };  const handleSubmit = async (e) => {
+  };
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiService.post('/eleves', formData);
-      setEleves([...eleves, response.data]);
-      setShowForm(false);
-      setFormData({
-        nom: '',
-        prenom: '',
-        email: '',
-        classe_id: '',
-        date_naissance: '',
-        adresse: '',
-        telephone_parent: '',
-        parent_nom: '',
-        parent_prenom: '',
-        parent_email: ''
-      });
-      alert('Élève ajouté avec succès!');
+      if (editingEleve) {
+        const response = await apiService.put(`/eleves/${editingEleve.id}`, formData);
+        setEleves(eleves.map(eleve => 
+          eleve.id === editingEleve.id ? response.data : eleve
+        ));
+      } else {
+        const response = await apiService.post('/eleves', formData);
+        setEleves([...eleves, response.data]);
+      }
+      resetForm();
+      alert(editingEleve ? 'Élève modifié avec succès!' : 'Élève ajouté avec succès!');
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
-      alert('Erreur lors de l\'ajout de l\'élève');
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde de l\'élève');
     }
   };
 
-  const getClasseNom = (classeId) => {
-    const classe = classes.find(c => c.id === classeId);
-    return classe ? classe.nom : 'Non assigné';
+  const handleEdit = (eleve) => {
+    setEditingEleve(eleve);
+    setFormData({
+      nom: eleve.nom,
+      prenom: eleve.prenom,
+      email: eleve.email,
+      classe_id: eleve.classe_id,
+      date_naissance: eleve.date_naissance,
+      adresse: eleve.adresse,
+      telephone_parent: eleve.telephone_parent,
+      parent_nom: eleve.parent_nom,
+      parent_prenom: eleve.parent_prenom,
+      parent_email: eleve.parent_email
+    });
+    setShowForm(true);
   };
 
+  const handleDelete = async (eleve) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cet élève ?')) {
+      try {
+        await apiService.delete(`/eleves/${eleve.id}`);
+        setEleves(eleves.filter(e => e.id !== eleve.id));
+        alert('Élève supprimé avec succès!');
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        alert('Erreur lors de la suppression de l\'élève');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      nom: '',
+      prenom: '',
+      email: '',
+      classe_id: '',
+      date_naissance: '',
+      adresse: '',
+      telephone_parent: '',
+      parent_nom: '',
+      parent_prenom: '',
+      parent_email: ''
+    });
+    setEditingEleve(null);
+    setShowForm(false);
+  };
+
+  const filteredEleves = eleves.filter(eleve =>
+    eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    {
+      key: 'nom',
+      label: 'Nom complet',
+      render: (value, row) => (
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+            {getInitials(row.prenom, value)}
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{formatFullName(row.prenom, value)}</div>
+            <div className="text-sm text-gray-500">{formatEmail(row.email)}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'classe_nom',
+      label: 'Classe',
+      render: (value) => (
+        <Badge variant="info">{value}</Badge>
+      )
+    },
+    {
+      key: 'date_naissance',
+      label: 'Date de naissance',
+      render: (value) => new Date(value).toLocaleDateString('fr-FR')
+    },
+    {
+      key: 'parent_nom',
+      label: 'Parent/Tuteur',
+      render: (value, row) => (
+        <div>
+          <div className="font-medium text-gray-900">{row.parent_prenom} {value}</div>
+          <div className="text-sm text-gray-500">{row.parent_email}</div>
+        </div>
+      )
+    }
+  ];
+
+  const actions = [
+    {
+      icon: Eye,
+      label: 'Voir',
+      onClick: (eleve) => console.log('Voir', eleve),
+      variant: 'default'
+    },
+    {
+      icon: Edit,
+      label: 'Modifier',
+      onClick: handleEdit,
+      variant: 'default'
+    },
+    {
+      icon: Trash2,
+      label: 'Supprimer',
+      onClick: handleDelete,
+      variant: 'danger'
+    }
+  ];
+
+  const pageActions = [
+    {
+      label: 'Ajouter un élève',
+      icon: Plus,
+      onClick: () => setShowForm(true),
+      variant: 'primary'
+    }
+  ];
+
   if (loading) {
-    return <div style={styles.loading}>Chargement...</div>;
+    return (
+      <PageLayout title="Gestion des Élèves" icon={Users}>
+        <Loading text="Chargement des élèves..." />
+      </PageLayout>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1>Gestion des Élèves</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          style={styles.addButton}
+    <PageLayout
+      title="Gestion des Élèves"
+      subtitle={`${eleves.length} élève(s) enregistré(s)`}
+      icon={Users}
+      actions={pageActions}
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+    >
+      {/* Formulaire d'ajout/modification */}
+      {showForm && (
+        <Card 
+          title={editingEleve ? 'Modifier l\'élève' : 'Ajouter un nouvel élève'} 
+          className="mb-6"
         >
-          {showForm ? 'Annuler' : 'Ajouter un élève'}
-        </button>
-      </div>      {showForm && (
-        <div style={styles.formContainer}>
-          <h2>Inscription d'un nouvel élève</h2>
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nom</label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Informations personnelles */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">
+                  Informations personnelles
+                </h4>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom *
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={formData.nom}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prénom *
+                  </label>
+                  <input
+                    type="text"
+                    name="prenom"
+                    value={formData.prenom}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email *
+                  </label>
+                  <input
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Date de naissance *
+                  </label>
+                  <input
+                    type="date"
+                    name="date_naissance"
+                    value={formData.date_naissance}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Classe *
+                  </label>
+                  <select
+                    name="classe_id"
+                    value={formData.classe_id}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  >
+                    <option value="">Sélectionner une classe</option>
+                    {classes.map(classe => (
+                      <option key={classe.id} value={classe.id}>
+                        {classe.nom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Adresse
+                  </label>
+                  <textarea
+                    name="adresse"
+                    value={formData.adresse}
+                    onChange={handleInputChange}
+                    rows={3}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Prénom</label>
-                <input
-                  type="text"
-                  name="prenom"
-                  value={formData.prenom}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
+
+              {/* Informations parent/tuteur */}
+              <div className="space-y-4">
+                <h4 className="text-lg font-medium text-gray-900 border-b pb-2">
+                  Informations parent/tuteur
+                </h4>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom du parent/tuteur
+                  </label>
+                  <input
+                    type="text"
+                    name="parent_nom"
+                    value={formData.parent_nom}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Prénom du parent/tuteur
+                  </label>
+                  <input
+                    type="text"
+                    name="parent_prenom"
+                    value={formData.parent_prenom}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Email du parent/tuteur
+                  </label>
+                  <input
+                    type="email"
+                    name="parent_email"
+                    value={formData.parent_email}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Téléphone du parent/tuteur
+                  </label>
+                  <input
+                    type="tel"
+                    name="telephone_parent"
+                    value={formData.telephone_parent}
+                    onChange={handleInputChange}
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
             </div>
 
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Email</label>
-                <input
-                  type="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
-              </div>              <div style={styles.formGroup}>
-                <label style={styles.label}>Classe</label>
-                <select
-                  name="classe_id"
-                  value={formData.classe_id}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                >
-                  <option value="">Sélectionner une classe</option>
-                  {classes.map(classe => (
-                    <option key={classe.id} value={classe.id}>
-                      {classe.nom}
-                    </option>
-                  ))}
-                </select>
-              </div>
+            <div className="flex justify-end space-x-3 pt-6 border-t">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
+              >
+                {editingEleve ? 'Modifier' : 'Ajouter'}
+              </button>
             </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Date de naissance</label>
-              <input
-                type="date"
-                name="date_naissance"
-                value={formData.date_naissance}
-                onChange={handleInputChange}
-                style={styles.input}
-                required
-              />
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Adresse</label>
-              <textarea
-                name="adresse"
-                value={formData.adresse}
-                onChange={handleInputChange}
-                style={styles.textarea}
-                required
-              />
-            </div>            <h3>Informations du parent/tuteur</h3>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nom du parent</label>
-                <input
-                  type="text"
-                  name="parent_nom"
-                  value={formData.parent_nom}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Prénom du parent</label>
-                <input
-                  type="text"
-                  name="parent_prenom"
-                  value={formData.parent_prenom}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-            </div>
-
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Email du parent</label>
-                <input
-                  type="email"
-                  name="parent_email"
-                  value={formData.parent_email}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
-              </div>              <div style={styles.formGroup}>
-                <label style={styles.label}>Téléphone du parent</label>
-                <input
-                  type="tel"
-                  name="telephone_parent"
-                  value={formData.telephone_parent}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  required
-                />
-              </div>
-            </div>
-
-            <button type="submit" style={styles.submitButton}>
-              Inscrire l'élève
-            </button>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div style={styles.tableContainer}>
-        <h2>Liste des élèves ({eleves.length})</h2>
-        {eleves.length === 0 ? (
-          <p style={styles.noData}>Aucun élève inscrit</p>
+      {/* Liste des élèves */}
+      <Card title="Liste des élèves">
+        {filteredEleves.length === 0 ? (
+          <EmptyState
+            title="Aucun élève trouvé"
+            description="Commencez par ajouter des élèves à votre système."
+            icon={Users}
+            action={() => setShowForm(true)}
+            actionLabel="Ajouter un élève"
+          />
         ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHeader}>
-                  <th style={styles.th}>Nom</th>
-                  <th style={styles.th}>Prénom</th>
-                  <th style={styles.th}>Email</th>
-                  <th style={styles.th}>Classe</th>
-                  <th style={styles.th}>Parent</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>              <tbody>
-                {eleves.map(eleve => (
-                  <tr key={eleve.id} style={styles.tableRow}>
-                    <td style={styles.td}>{eleve.nom}</td>
-                    <td style={styles.td}>{eleve.prenom}</td>
-                    <td style={styles.td}>{eleve.email}</td>
-                    <td style={styles.td}>{getClasseNom(eleve.classe_id)}</td>
-                    <td style={styles.td}>
-                      {eleve.parent_prenom} {eleve.parent_nom}
-                    </td>
-                    <td style={styles.td}>
-                      <button style={styles.actionButton}>Modifier</button>
-                      <button style={{...styles.actionButton, backgroundColor: '#dc3545'}}>
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            columns={columns}
+            data={filteredEleves}
+            actions={actions}
+          />
         )}
-      </div>
-    </div>
+      </Card>
+    </PageLayout>
   );
-};
-
-const styles = {
-  container: {
-    padding: '2rem',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    position: 'relative'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px'
-  },
-  addButton: {
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '0.875rem 2rem',
-    borderRadius: '1rem',
-    cursor: 'pointer',
-    fontSize: '0.875rem',
-    fontWeight: '600',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
-  },  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px'
-  },
-  formContainer: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    borderRadius: '1.5rem',
-    padding: '2.5rem',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    marginBottom: '2rem',
-    position: 'relative',
-    overflow: 'hidden'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  formRow: {
-    display: 'flex',
-    gap: '20px'
-  },
-  formGroup: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },
-  input: {
-    width: '100%',
-    padding: '0.875rem 1rem',
-    border: '2px solid rgba(226, 232, 240, 0.8)',
-    borderRadius: '0.75rem',
-    fontSize: '0.875rem',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    background: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(10px)',
-    outline: 'none'
-  },
-  textarea: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px',
-    minHeight: '80px',
-    resize: 'vertical'
-  },  submitButton: {
-    background: 'linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1rem 2.5rem',
-    borderRadius: '1rem',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '600',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 15px rgba(59, 130, 246, 0.3)',
-    alignSelf: 'flex-start'
-  },
-  tableContainer: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    borderRadius: '1.5rem',
-    overflow: 'hidden',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    padding: '2rem'
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '40px'
-  },
-  tableWrapper: {
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  tableHeader: {
-    backgroundColor: '#f8f9fa'
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left',
-    borderBottom: '2px solid #ddd',
-    fontWeight: '600'
-  },
-  tableRow: {
-    borderBottom: '1px solid #eee'
-  },
-  td: {
-    padding: '12px',
-    borderBottom: '1px solid #eee'
-  },
-  actionButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px',
-    marginRight: '8px'
-  }
 };
 
 export default GestionEleves;

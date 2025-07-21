@@ -1,10 +1,12 @@
 import React from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   LayoutDashboard, 
   Users, 
   BookOpen, 
   ClipboardList,
+  Calendar,
   School,
   UserCheck,
   Award,
@@ -13,37 +15,44 @@ import {
   LogOut
 } from 'lucide-react';
 
-const Sidebar = ({ currentPage, setCurrentPage }) => {
+const Sidebar = () => {
   const { user, logout } = useAuth();
+  const location = useLocation();
 
   const getMenuItems = () => {
     const items = [
-      { id: 'dashboard', label: 'Tableau de bord', icon: LayoutDashboard, roles: ['admin', 'enseignant', 'parent'] },
+      { 
+        path: '/dashboard', 
+        label: 'Tableau de bord', 
+        icon: LayoutDashboard, 
+        roles: ['admin', 'enseignant', 'parent'] 
+      },
     ];
 
     // Items admin seulement
     if (user?.role === 'admin') {
       items.push(
-        { id: 'eleves', label: 'Gestion des élèves', icon: Users, roles: ['admin'] },
-        { id: 'enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['admin'] },
-        { id: 'classes', label: 'Gestion des classes', icon: School, roles: ['admin'] },
-        { id: 'matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['admin'] },
-        { id: 'documents', label: 'Gestion des documents', icon: Upload, roles: ['admin'] }
+        { path: '/eleves', label: 'Gestion des élèves', icon: Users, roles: ['admin'] },
+        { path: '/enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['admin'] },
+        { path: '/classes', label: 'Gestion des classes', icon: School, roles: ['admin'] },
+        { path: '/matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['admin'] },
+        { path: '/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['admin'] },
+        { path: '/documents', label: 'Gestion des documents', icon: Upload, roles: ['admin'] }
       );
     }
 
     // Items admin et enseignant
     if (['admin', 'enseignant'].includes(user?.role)) {
       items.push(
-        { id: 'notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['admin', 'enseignant'] },
-        { id: 'bulletins', label: 'Bulletins', icon: Award, roles: ['admin', 'enseignant'] }
+        { path: '/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['admin', 'enseignant'] },
+        { path: '/bulletins', label: 'Bulletins', icon: Award, roles: ['admin', 'enseignant'] }
       );
     }
 
     // Items parent
     if (user?.role === 'parent') {
       items.push(
-        { id: 'bulletins', label: 'Bulletins de mes enfants', icon: Award, roles: ['parent'] }
+        { path: '/bulletins', label: 'Bulletins de mes enfants', icon: Award, roles: ['parent'] }
       );
     }
 
@@ -53,11 +62,11 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
   const menuItems = getMenuItems();
 
   return (
-    <div className="fixed left-0 top-0 h-full w-64 bg-white shadow-lg border-r border-gray-200 z-40 overflow-y-auto">
+    <div className="fixed left-0 top-0 h-screen w-64 bg-white shadow-xl border-r border-gray-200 z-50 flex flex-col">
       {/* Header */}
-      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700">
+      <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
         <div className="flex items-center">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3">
+          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3 shadow-md">
             <School className="w-6 h-6 text-blue-600" />
           </div>
           <div>
@@ -67,52 +76,61 @@ const Sidebar = ({ currentPage, setCurrentPage }) => {
         </div>
       </div>
 
-      {/* User Info */}
-      <div className="p-4 border-b border-gray-200 bg-gray-50">
-        <div className="flex items-center">
+      {/* Navigation Menu - Prend tout l'espace disponible */}
+      <nav className="flex-1 py-4 overflow-y-auto">
+        <div className="space-y-1 px-3">
+          {menuItems.map(item => {
+            const isActive = location.pathname === item.path;
+            const Icon = item.icon;
+            
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                className={({ isActive }) => `
+                  w-full flex items-center px-3 py-3 text-left rounded-lg transition-all duration-200 group
+                  ${isActive
+                    ? 'bg-blue-100 text-blue-700 shadow-sm border-l-4 border-blue-700'
+                    : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
+                  }
+                `}
+              >
+                <Icon className={`
+                  w-5 h-5 mr-3 flex-shrink-0 transition-colors
+                  ${isActive ? 'text-blue-700' : 'text-gray-500 group-hover:text-blue-600'}
+                `} />
+                <span className={`
+                  font-medium text-sm
+                  ${isActive ? 'text-blue-700' : 'text-gray-700 group-hover:text-blue-600'}
+                `}>
+                  {item.label}
+                </span>
+              </NavLink>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Footer - User Info & Logout - Toujours en bas */}
+      <div className="border-t border-gray-200 p-4 flex-shrink-0 bg-gray-50">
+        {/* User Info */}
+        <div className="flex items-center mb-3">
           <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
             <User className="w-6 h-6 text-blue-600" />
           </div>
           <div className="flex-1">
-            <div className="font-medium text-gray-900">{user?.name}</div>
-            <div className="text-sm text-gray-500 capitalize">{user?.role}</div>
+            <div className="font-semibold text-gray-900 text-sm">{user?.name || 'Utilisateur'}</div>
+            <div className="text-xs text-gray-500 capitalize">{user?.role || 'Invité'}</div>
           </div>
         </div>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 py-4">
-        {menuItems.map(item => {
-          const isActive = currentPage === item.id;
-          const Icon = item.icon;
-          
-          return (
-            <button
-              key={item.id}
-              onClick={() => setCurrentPage(item.id)}
-              className={`w-full flex items-center px-4 py-3 text-left transition-all duration-200 ${
-                isActive
-                  ? 'bg-blue-100 text-blue-700 border-r-4 border-blue-700'
-                  : 'text-gray-700 hover:bg-gray-100 hover:text-blue-600'
-              }`}
-            >
-              <Icon className={`w-5 h-5 mr-3 ${
-                isActive ? 'text-blue-700' : 'text-gray-500'
-              }`} />
-              <span className="font-medium">{item.label}</span>
-            </button>
-          );
-        })}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-gray-200 bg-gray-50">
+        
+        {/* Logout Button */}
         <button
           onClick={logout}
-          className="w-full flex items-center px-4 py-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+          className="w-full flex items-center px-3 py-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 group border border-red-200 hover:border-red-300"
         >
-          <LogOut className="w-5 h-5 mr-3" />
-          <span className="font-medium">Déconnexion</span>
+          <LogOut className="w-5 h-5 mr-3 text-red-500 group-hover:text-red-600" />
+          <span className="font-medium text-sm">Déconnexion</span>
         </button>
       </div>
     </div>

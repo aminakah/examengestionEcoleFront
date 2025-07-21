@@ -1,10 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { School, Plus, Edit, Trash2, Users, BookOpen } from 'lucide-react';
 import { apiService } from '../services/apiService';
+import PageLayout from '../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { getInitial } from '../utils/formatters';
 
 const GestionClasses = () => {
   const [classes, setClasses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingClasse, setEditingClasse] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     nom: '',
     niveau: '',
@@ -38,56 +44,196 @@ const GestionClasses = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiService.post('/classes', formData);
-      setClasses([...classes, response.data]);
-      setShowForm(false);
-      setFormData({ nom: '', niveau: '', effectif: 0 });
-      alert('Classe ajoutée avec succès!');
+      if (editingClasse) {
+        const response = await apiService.put(`/classes/${editingClasse.id}`, formData);
+        setClasses(classes.map(classe => 
+          classe.id === editingClasse.id ? response.data : classe
+        ));
+      } else {
+        const response = await apiService.post('/classes', formData);
+        setClasses([...classes, response.data]);
+      }
+      resetForm();
+      alert(editingClasse ? 'Classe modifiée avec succès!' : 'Classe ajoutée avec succès!');
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
-      alert('Erreur lors de l\'ajout de la classe');
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde de la classe');
     }
-  };  if (loading) {
-    return <div style={styles.loading}>Chargement...</div>;
+  };
+
+  const handleEdit = (classe) => {
+    setEditingClasse(classe);
+    setFormData({
+      nom: classe.nom,
+      niveau: classe.niveau,
+      effectif: classe.effectif
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (classe) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette classe ?')) {
+      try {
+        await apiService.delete(`/classes/${classe.id}`);
+        setClasses(classes.filter(c => c.id !== classe.id));
+        alert('Classe supprimée avec succès!');
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        alert('Erreur lors de la suppression de la classe');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({ nom: '', niveau: '', effectif: 0 });
+    setEditingClasse(null);
+    setShowForm(false);
+  };
+
+  const filteredClasses = classes.filter(classe =>
+    classe.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    classe.niveau.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    {
+      key: 'nom',
+      label: 'Nom de la classe',
+      render: (value, row) => (
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+            {getInitial(value)}
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{value || 'Nom non renseigné'}</div>
+            <div className="text-sm text-gray-500">{row.niveau || 'Niveau non renseigné'}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'niveau',
+      label: 'Niveau',
+      render: (value) => (
+        <Badge variant="info">{value}</Badge>
+      )
+    },
+    {
+      key: 'effectif',
+      label: 'Effectif',
+      render: (value) => (
+        <div className="flex items-center space-x-2">
+          <Users className="w-4 h-4 text-gray-400" />
+          <span className="font-medium">{value} élèves</span>
+        </div>
+      )
+    }
+  ];
+
+  const actions = [
+    {
+      icon: Edit,
+      label: 'Modifier',
+      onClick: handleEdit,
+      variant: 'default'
+    },
+    {
+      icon: Trash2,
+      label: 'Supprimer',
+      onClick: handleDelete,
+      variant: 'danger'
+    }
+  ];
+
+  const pageActions = [
+    {
+      label: 'Ajouter une classe',
+      icon: Plus,
+      onClick: () => setShowForm(true),
+      variant: 'primary'
+    }
+  ];
+
+  // Statistiques
+  const totalClasses = classes.length;
+  const totalEleves = classes.reduce((sum, classe) => sum + classe.effectif, 0);
+  const moyenneEffectif = totalClasses > 0 ? Math.round(totalEleves / totalClasses) : 0;
+
+  if (loading) {
+    return (
+      <PageLayout title="Gestion des Classes" icon={School}>
+        <Loading text="Chargement des classes..." />
+      </PageLayout>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1>Gestion des Classes</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          style={styles.addButton}
-        >
-          {showForm ? 'Annuler' : 'Ajouter une classe'}
-        </button>
+    <PageLayout
+      title="Gestion des Classes"
+      subtitle={`${totalClasses} classe(s) • ${totalEleves} élèves au total`}
+      icon={School}
+      actions={pageActions}
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+    >
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatsCard
+          title="Total Classes"
+          value={totalClasses}
+          icon={School}
+          color="purple"
+          trend={`+${Math.round((totalClasses / 10) * 100)}%`}
+        />
+        <StatsCard
+          title="Total Élèves"
+          value={totalEleves}
+          icon={Users}
+          color="blue"
+          trend={`${moyenneEffectif} moy/classe`}
+        />
+        <StatsCard
+          title="Effectif Moyen"
+          value={moyenneEffectif}
+          icon={BookOpen}
+          color="green"
+          trend="Optimal"
+        />
       </div>
 
+      {/* Formulaire d'ajout/modification */}
       {showForm && (
-        <div style={styles.formContainer}>
-          <h2>Ajouter une nouvelle classe</h2>
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nom de la classe</label>
+        <Card 
+          title={editingClasse ? 'Modifier la classe' : 'Ajouter une nouvelle classe'} 
+          className="mb-6"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nom de la classe *
+                </label>
                 <input
                   type="text"
                   name="nom"
                   value={formData.nom}
                   onChange={handleInputChange}
-                  style={styles.input}
-                  placeholder="Ex: 6ème A"
                   required
+                  placeholder="Ex: 6ème A, 5ème B..."
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Niveau</label>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Niveau *
+                </label>
                 <select
                   name="niveau"
                   value={formData.niveau}
                   onChange={handleInputChange}
-                  style={styles.input}
                   required
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="">Sélectionner un niveau</option>
                   {niveaux.map(niveau => (
@@ -97,173 +243,62 @@ const GestionClasses = () => {
                   ))}
                 </select>
               </div>
-            </div>            <div style={styles.formGroup}>
-              <label style={styles.label}>Effectif maximum</label>
-              <input
-                type="number"
-                name="effectif"
-                value={formData.effectif}
-                onChange={handleInputChange}
-                style={styles.input}
-                min="1"
-                placeholder="Ex: 30"
-                required
-              />
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Effectif prévu
+                </label>
+                <input
+                  type="number"
+                  name="effectif"
+                  value={formData.effectif}
+                  onChange={handleInputChange}
+                  min="0"
+                  placeholder="30"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
             </div>
 
-            <button type="submit" style={styles.submitButton}>
-              Ajouter la classe
-            </button>
+            <div className="flex justify-end space-x-3 pt-6 border-t">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
+              >
+                {editingClasse ? 'Modifier' : 'Ajouter'}
+              </button>
+            </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div style={styles.tableContainer}>
-        <h2>Liste des classes ({classes.length})</h2>
-        {classes.length === 0 ? (
-          <p style={styles.noData}>Aucune classe créée</p>
+      {/* Liste des classes */}
+      <Card title="Liste des classes">
+        {filteredClasses.length === 0 ? (
+          <EmptyState
+            title="Aucune classe trouvée"
+            description="Commencez par créer des classes pour votre établissement."
+            icon={School}
+            action={() => setShowForm(true)}
+            actionLabel="Ajouter une classe"
+          />
         ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHeader}>
-                  <th style={styles.th}>Nom</th>
-                  <th style={styles.th}>Niveau</th>
-                  <th style={styles.th}>Effectif</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {classes.map(classe => (
-                  <tr key={classe.id} style={styles.tableRow}>
-                    <td style={styles.td}>{classe.nom}</td>
-                    <td style={styles.td}>{classe.niveau}</td>
-                    <td style={styles.td}>{classe.effectif}</td>
-                    <td style={styles.td}>
-                      <button style={styles.actionButton}>Modifier</button>
-                      <button style={{...styles.actionButton, backgroundColor: '#dc3545'}}>
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            columns={columns}
+            data={filteredClasses}
+            actions={actions}
+          />
         )}
-      </div>
-    </div>
+      </Card>
+    </PageLayout>
   );
-};const styles = {
-  container: {
-    padding: '20px',
-    maxWidth: '1200px'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px'
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px'
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '30px'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  formRow: {
-    display: 'flex',
-    gap: '20px'
-  },
-  formGroup: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },  input: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
-  },
-  submitButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '12px 24px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    alignSelf: 'flex-start'
-  },
-  tableContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '40px'
-  },
-  tableWrapper: {
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  tableHeader: {
-    backgroundColor: '#f8f9fa'
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left',
-    borderBottom: '2px solid #ddd',
-    fontWeight: '600'
-  },
-  tableRow: {
-    borderBottom: '1px solid #eee'
-  },
-  td: {
-    padding: '12px',
-    borderBottom: '1px solid #eee'
-  },
-  actionButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px',
-    marginRight: '8px'
-  }
 };
 
 export default GestionClasses;

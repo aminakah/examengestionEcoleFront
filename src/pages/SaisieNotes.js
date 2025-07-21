@@ -1,28 +1,32 @@
 import React, { useState, useEffect } from 'react';
+import { Award, Plus, Edit, Save, Users, BookOpen, Calculator, TrendingUp } from 'lucide-react';
 import { apiService } from '../services/apiService';
+import PageLayout from '../components/PageLayout';
+import { Card, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
 
 const SaisieNotes = () => {
+  const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
   const [matieres, setMatieres] = useState([]);
-  const [eleves, setEleves] = useState([]);
   const [notes, setNotes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedClasse, setSelectedClasse] = useState('');
   const [selectedMatiere, setSelectedMatiere] = useState('');
-  const [selectedPeriode, setSelectedPeriode] = useState('Trimestre 1');
-  const [loading, setLoading] = useState(true);
-  const [saisieNotes, setSaisieNotes] = useState({});
-
-  const periodes = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+  const [searchTerm, setSearchTerm] = useState('');
+  const [evaluationType, setEvaluationType] = useState('devoir');
+  const [evaluationDate, setEvaluationDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     loadData();
   }, []);
 
   useEffect(() => {
-    if (selectedClasse) {
+    if (selectedClasse && selectedMatiere) {
       loadEleves();
+      loadNotes();
     }
-  }, [selectedClasse]);
+  }, [selectedClasse, selectedMatiere]);
 
   const loadData = async () => {
     try {
@@ -41,310 +45,351 @@ const SaisieNotes = () => {
   };
 
   const loadEleves = async () => {
+    if (!selectedClasse) return;
+    
     try {
-      const elevesRes = await apiService.get('/eleves');
-      const elevesClasse = elevesRes.data.filter(eleve => eleve.classe_id == selectedClasse);
-      setEleves(elevesClasse);
-      
-      // Initialiser les notes existantes
-      const notesInit = {};
-      elevesClasse.forEach(eleve => {
-        notesInit[eleve.id] = '';
-      });
-      setSaisieNotes(notesInit);
+      const response = await apiService.get(`/classes/${selectedClasse}/eleves`);
+      setEleves(response.data);
     } catch (error) {
       console.error('Erreur lors du chargement des élèves:', error);
     }
-  };  const handleNoteChange = (eleveId, note) => {
-    setSaisieNotes({
-      ...saisieNotes,
-      [eleveId]: note
-    });
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const loadNotes = async () => {
+    if (!selectedClasse || !selectedMatiere) return;
     
-    if (!selectedClasse || !selectedMatiere) {
-      alert('Veuillez sélectionner une classe et une matière');
+    try {
+      const response = await apiService.get(`/notes?classe_id=${selectedClasse}&matiere_id=${selectedMatiere}`);
+      setNotes(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des notes:', error);
+    }
+  };
+
+  const handleNoteChange = (eleveId, value) => {
+    const noteValue = value === '' ? null : parseFloat(value);
+    
+    setEleves(eleves.map(eleve => 
+      eleve.id === eleveId 
+        ? { ...eleve, note_temp: noteValue }
+        : eleve
+    ));
+  };
+
+  const saveNote = async (eleveId) => {
+    const eleve = eleves.find(e => e.id === eleveId);
+    if (!eleve || eleve.note_temp === undefined) return;
+
+    try {
+      const noteData = {
+        eleve_id: eleveId,
+        matiere_id: selectedMatiere,
+        note: eleve.note_temp,
+        type: evaluationType,
+        date_evaluation: evaluationDate
+      };
+
+      await apiService.post('/notes', noteData);
+      
+      // Mettre à jour l'élève pour marquer la note comme sauvegardée
+      setEleves(eleves.map(e => 
+        e.id === eleveId 
+          ? { ...e, note_actuelle: e.note_temp, note_temp: undefined }
+          : e
+      ));
+      
+      alert('Note sauvegardée avec succès!');
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde de la note');
+    }
+  };
+
+  const saveAllNotes = async () => {
+    const elevesWithNotes = eleves.filter(e => e.note_temp !== undefined && e.note_temp !== null);
+    
+    if (elevesWithNotes.length === 0) {
+      alert('Aucune note à sauvegarder');
       return;
     }
 
     try {
-      const notesToSave = Object.entries(saisieNotes)
-        .filter(([eleveId, note]) => note !== '')
-        .map(([eleveId, note]) => ({
-          eleve_id: parseInt(eleveId),
-          matiere_id: parseInt(selectedMatiere),
-          note: parseFloat(note),
-          periode: selectedPeriode,
-          date: new Date().toISOString().split('T')[0],
-          type: 'Devoir'
-        }));
-
-      // Simuler la sauvegarde des notes
-      for (const noteData of notesToSave) {
-        await apiService.post('/notes', noteData);
-      }
-
-      alert(`${notesToSave.length} notes sauvegardées avec succès!`);
-      
-      // Réinitialiser le formulaire
-      const notesInit = {};
-      eleves.forEach(eleve => {
-        notesInit[eleve.id] = '';
+      const promises = elevesWithNotes.map(eleve => {
+        const noteData = {
+          eleve_id: eleve.id,
+          matiere_id: selectedMatiere,
+          note: eleve.note_temp,
+          type: evaluationType,
+          date_evaluation: evaluationDate
+        };
+        return apiService.post('/notes', noteData);
       });
-      setSaisieNotes(notesInit);
+
+      await Promise.all(promises);
       
+      // Mettre à jour tous les élèves
+      setEleves(eleves.map(e => 
+        e.note_temp !== undefined 
+          ? { ...e, note_actuelle: e.note_temp, note_temp: undefined }
+          : e
+      ));
+      
+      alert(`${elevesWithNotes.length} note(s) sauvegardée(s) avec succès!`);
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde des notes');
     }
   };
 
+  const filteredEleves = eleves.filter(eleve =>
+    eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Statistiques
+  const elevesAvecNotes = eleves.filter(e => e.note_actuelle !== null && e.note_actuelle !== undefined);
+  const moyenneClasse = elevesAvecNotes.length > 0 
+    ? Math.round((elevesAvecNotes.reduce((sum, e) => sum + e.note_actuelle, 0) / elevesAvecNotes.length) * 100) / 100
+    : 0;
+  const tauxCompletion = eleves.length > 0 ? Math.round((elevesAvecNotes.length / eleves.length) * 100) : 0;
+
+  const pageActions = [
+    {
+      label: 'Sauvegarder toutes les notes',
+      icon: Save,
+      onClick: saveAllNotes,
+      variant: 'success'
+    }
+  ];
+
   if (loading) {
-    return <div style={styles.loading}>Chargement...</div>;
-  }  return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Saisie des Notes</h1>
-      
-      <div style={styles.filtersContainer}>
-        <div style={styles.filterGroup}>
-          <label style={styles.label}>Classe</label>
-          <select
-            value={selectedClasse}
-            onChange={(e) => setSelectedClasse(e.target.value)}
-            style={styles.select}
-            required
-          >
-            <option value="">Sélectionner une classe</option>
-            {classes.map(classe => (
-              <option key={classe.id} value={classe.id}>
-                {classe.nom}
-              </option>
-            ))}
-          </select>
-        </div>
+    return (
+      <PageLayout title="Saisie des Notes" icon={Award}>
+        <Loading text="Chargement des données..." />
+      </PageLayout>
+    );
+  }
 
-        <div style={styles.filterGroup}>
-          <label style={styles.label}>Matière</label>
-          <select
-            value={selectedMatiere}
-            onChange={(e) => setSelectedMatiere(e.target.value)}
-            style={styles.select}
-            required
-          >
-            <option value="">Sélectionner une matière</option>
-            {matieres.map(matiere => (
-              <option key={matiere.id} value={matiere.id}>
-                {matiere.nom}
-              </option>
-            ))}
-          </select>
-        </div>
+  return (
+    <PageLayout
+      title="Saisie de nms Notes"
+      subtitle="Gérez les évaluations et notes des élèves"
+      icon={Award}
+      actions={selectedClasse && selectedMatiere ? pageActions : []}
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+    >
+      {/* Filtres de sélection */}
+      <Card title="Sélection de l'évaluation" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Classe *
+            </label>
+            <select
+              value={selectedClasse}
+              onChange={(e) => setSelectedClasse(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sélectionner une classe</option>
+              {classes.map(classe => (
+                <option key={classe.id} value={classe.id}>
+                  {classe.nom}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        <div style={styles.filterGroup}>
-          <label style={styles.label}>Période</label>
-          <select
-            value={selectedPeriode}
-            onChange={(e) => setSelectedPeriode(e.target.value)}
-            style={styles.select}
-          >
-            {periodes.map(periode => (
-              <option key={periode} value={periode}>
-                {periode}
-              </option>
-            ))}
-          </select>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Matière *
+            </label>
+            <select
+              value={selectedMatiere}
+              onChange={(e) => setSelectedMatiere(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sélectionner une matière</option>
+              {matieres.map(matiere => (
+                <option key={matiere.id} value={matiere.id}>
+                  {matiere.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Type d'évaluation
+            </label>
+            <select
+              value={evaluationType}
+              onChange={(e) => setEvaluationType(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="devoir">Devoir</option>
+              <option value="composition">Composition</option>
+              <option value="interrogation">Interrogation</option>
+              <option value="examen">Examen</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Date d'évaluation
+            </label>
+            <input
+              type="date"
+              value={evaluationDate}
+              onChange={(e) => setEvaluationDate(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
         </div>
-      </div>      {selectedClasse && selectedMatiere && eleves.length > 0 && (
-        <div style={styles.notesContainer}>
-          <h2>
-            Saisie des notes - {classes.find(c => c.id == selectedClasse)?.nom} - 
-            {matieres.find(m => m.id == selectedMatiere)?.nom} - {selectedPeriode}
-          </h2>
-          
-          <form onSubmit={handleSubmit}>
-            <div style={styles.tableContainer}>
-              <table style={styles.table}>
-                <thead>
-                  <tr style={styles.tableHeader}>
-                    <th style={styles.th}>Nom</th>
-                    <th style={styles.th}>Prénom</th>
-                    <th style={styles.th}>Note (/20)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {eleves.map(eleve => (
-                    <tr key={eleve.id} style={styles.tableRow}>
-                      <td style={styles.td}>{eleve.nom}</td>
-                      <td style={styles.td}>{eleve.prenom}</td>
-                      <td style={styles.td}>
+      </Card>
+
+      {selectedClasse && selectedMatiere && (
+        <>
+          {/* Statistiques */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <StatsCard
+              title="Élèves"
+              value={eleves.length}
+              icon={Users}
+              color="blue"
+            />
+            <StatsCard
+              title="Notes saisies"
+              value={elevesAvecNotes.length}
+              icon={Award}
+              color="green"
+              trend={`${tauxCompletion}% complété`}
+            />
+            <StatsCard
+              title="Moyenne classe"
+              value={`${moyenneClasse}/20`}
+              icon={Calculator}
+              color="orange"
+              trend={moyenneClasse >= 10 ? "Satisfaisant" : "À améliorer"}
+            />
+            <StatsCard
+              title="Progression"
+              value={`${tauxCompletion}%`}
+              icon={TrendingUp}
+              color="purple"
+              trend={tauxCompletion === 100 ? "Terminé" : "En cours"}
+            />
+          </div>
+
+          {/* Saisie des notes */}
+          <Card title={`Saisie des notes - ${classes.find(c => c.id == selectedClasse)?.nom} - ${matieres.find(m => m.id == selectedMatiere)?.nom}`}>
+            {filteredEleves.length === 0 ? (
+              <EmptyState
+                title="Aucun élève trouvé"
+                description="Aucun élève n'est inscrit dans cette classe ou ne correspond à votre recherche."
+                icon={Users}
+              />
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-12 gap-4 py-3 px-4 bg-gray-50 rounded-lg font-medium text-sm text-gray-700">
+                  <div className="col-span-4">Élève</div>
+                  <div className="col-span-2">Note actuelle</div>
+                  <div className="col-span-3">Nouvelle note (/20)</div>
+                  <div className="col-span-2">Statut</div>
+                  <div className="col-span-1">Action</div>
+                </div>
+
+                {filteredEleves.map(eleve => {
+                  const hasChanges = eleve.note_temp !== undefined;
+                  const noteDisplay = eleve.note_temp !== undefined ? eleve.note_temp : eleve.note_actuelle;
+                  
+                  return (
+                    <div key={eleve.id} className="grid grid-cols-12 gap-4 py-4 px-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+                      {/* Informations élève */}
+                      <div className="col-span-4 flex items-center space-x-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+                          {getInitials(eleve.prenom, eleve.nom)}
+                        </div>
+                        <div>
+                          <div className="font-medium text-gray-900">
+                            {formatFullName(eleve.prenom, eleve.nom)}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {formatEmail(eleve.email)}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Note actuelle */}
+                      <div className="col-span-2 flex items-center">
+                        {eleve.note_actuelle !== null && eleve.note_actuelle !== undefined ? (
+                          <Badge variant={eleve.note_actuelle >= 10 ? 'success' : 'danger'}>
+                            {eleve.note_actuelle}/20
+                          </Badge>
+                        ) : (
+                          <span className="text-gray-400 text-sm">Pas de note</span>
+                        )}
+                      </div>
+
+                      {/* Saisie nouvelle note */}
+                      <div className="col-span-3 flex items-center">
                         <input
                           type="number"
                           min="0"
                           max="20"
                           step="0.5"
-                          value={saisieNotes[eleve.id] || ''}
+                          value={eleve.note_temp || ''}
                           onChange={(e) => handleNoteChange(eleve.id, e.target.value)}
-                          style={styles.noteInput}
-                          placeholder="Note"
+                          placeholder="0-20"
+                          className={`w-full border rounded-lg px-3 py-2 text-center focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
+                            hasChanges ? 'border-orange-300 bg-orange-50' : 'border-gray-300'
+                          }`}
                         />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            
-            <div style={styles.submitContainer}>
-              <button type="submit" style={styles.submitButton}>
-                Sauvegarder les notes
-              </button>
-            </div>
-          </form>
-        </div>
-      )}      {selectedClasse && eleves.length === 0 && (
-        <div style={styles.noData}>
-          Aucun élève trouvé dans cette classe
-        </div>
-      )}
-      
-      {!selectedClasse && (
-        <div style={styles.instruction}>
-          Veuillez sélectionner une classe pour commencer la saisie des notes
-        </div>
-      )}
-    </div>
-  );
-};
+                      </div>
 
-const styles = {
-  container: {
-    padding: '2rem',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    position: 'relative'
-  },
-  title: {
-    fontSize: '2.5rem',
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: '2rem',
-    textAlign: 'center',
-    background: 'linear-gradient(45deg, #ffffff, #e0e7ff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px'
-  },
-  filtersContainer: {
-    display: 'flex',
-    gap: '1.5rem',
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    padding: '2rem',
-    borderRadius: '1.5rem',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    marginBottom: '2rem'
-  },
-  filterGroup: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },
-  select: {
-    padding: '0.875rem 1rem',
-    border: '2px solid rgba(226, 232, 240, 0.8)',
-    borderRadius: '0.75rem',
-    fontSize: '0.875rem',
-    background: 'rgba(255, 255, 255, 0.9)',
-    backdropFilter: 'blur(10px)',
-    cursor: 'pointer',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    outline: 'none'
-  },  notesContainer: {
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    padding: '2.5rem',
-    borderRadius: '1.5rem',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)'
-  },
-  tableContainer: {
-    marginTop: '20px',
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  tableHeader: {
-    backgroundColor: '#f8f9fa'
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left',
-    borderBottom: '2px solid #ddd',
-    fontWeight: '600'
-  },
-  tableRow: {
-    borderBottom: '1px solid #eee'
-  },
-  td: {
-    padding: '12px',
-    borderBottom: '1px solid #eee'
-  },
-  noteInput: {
-    padding: '8px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    width: '80px',
-    textAlign: 'center'
-  },
-  submitContainer: {
-    marginTop: '30px',
-    textAlign: 'center'
-  },
-  submitButton: {
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1rem 2.5rem',
-    borderRadius: '1rem',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '600',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
-  },  noData: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '40px',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  instruction: {
-    textAlign: 'center',
-    color: '#666',
-    padding: '40px',
-    backgroundColor: 'white',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    fontSize: '16px'
-  }
+                      {/* Statut */}
+                      <div className="col-span-2 flex items-center">
+                        {hasChanges ? (
+                          <Badge variant="warning">Non sauvegardé</Badge>
+                        ) : eleve.note_actuelle !== null ? (
+                          <Badge variant="success">Sauvegardé</Badge>
+                        ) : (
+                          <Badge variant="default">Vide</Badge>
+                        )}
+                      </div>
+
+                      {/* Action */}
+                      <div className="col-span-1 flex items-center">
+                        {hasChanges && (
+                          <button
+                            onClick={() => saveNote(eleve.id)}
+                            className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors"
+                            title="Sauvegarder cette note"
+                          >
+                            <Save className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </Card>
+        </>
+      )}
+
+      {!selectedClasse || !selectedMatiere ? (
+        <Card>
+          <EmptyState
+            title="Sélectionnez une classe et une matière"
+            description="Pour commencer la saisie des notes, veuillez d'abord sélectionner une classe et une matière."
+            icon={Award}
+          />
+        </Card>
+      ) : null}
+    </PageLayout>
+  );
 };
 
 export default SaisieNotes;

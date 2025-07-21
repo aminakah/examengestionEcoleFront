@@ -1,30 +1,39 @@
 import React, { useState, useEffect } from 'react';
+import { FileText, Download, Eye, Calendar, Users, BookOpen, TrendingUp, Award } from 'lucide-react';
 import { apiService } from '../services/apiService';
+import PageLayout from '../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
 
 const Bulletins = () => {
   const [bulletins, setBulletins] = useState([]);
-  const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
-  const [selectedClasse, setSelectedClasse] = useState('');
-  const [selectedPeriode, setSelectedPeriode] = useState('Trimestre 1');
+  const [eleves, setEleves] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedClasse, setSelectedClasse] = useState('');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
 
-  const periodes = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+  const trimestres = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedClasse) {
+      loadEleves();
+    }
+  }, [selectedClasse]);
+
   const loadData = async () => {
     try {
-      const [bulletinsRes, elevesRes, classesRes] = await Promise.all([
+      const [bulletinsRes, classesRes] = await Promise.all([
         apiService.get('/bulletins'),
-        apiService.get('/eleves'),
         apiService.get('/classes')
       ]);
       
       setBulletins(bulletinsRes.data);
-      setEleves(elevesRes.data);
       setClasses(classesRes.data);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
@@ -33,42 +42,30 @@ const Bulletins = () => {
     }
   };
 
-  const getEleveNom = (eleveId) => {
-    const eleve = eleves.find(e => e.id === eleveId);
-    return eleve ? `${eleve.prenom} ${eleve.nom}` : 'Inconnu';
+  const loadEleves = async () => {
+    if (!selectedClasse) return;
+    
+    try {
+      const response = await apiService.get(`/classes/${selectedClasse}/eleves`);
+      setEleves(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des élèves:', error);
+    }
   };
 
-  const getClasseNom = (eleveId) => {
-    const eleve = eleves.find(e => e.id === eleveId);
-    if (!eleve) return 'Non assigné';
-    const classe = classes.find(c => c.id === eleve.classe_id);
-    return classe ? classe.nom : 'Non assigné';
-  };  const filteredBulletins = bulletins.filter(bulletin => {
-    let match = true;
-    if (selectedPeriode) {
-      match = match && bulletin.periode === selectedPeriode;
-    }
-    if (selectedClasse) {
-      const eleve = eleves.find(e => e.id === bulletin.eleve_id);
-      match = match && eleve && eleve.classe_id === selectedClasse;
-    }
-    return match;
-  });
-
   const generateBulletin = async (eleveId) => {
+    if (!selectedTrimestre) {
+      alert('Veuillez sélectionner un trimestre');
+      return;
+    }
+
     try {
-      // Simulation de génération de bulletin
-      const newBulletin = {
+      const response = await apiService.post('/bulletins/generate', {
         eleve_id: eleveId,
-        periode: selectedPeriode,
-        date_generation: new Date().toISOString().split('T')[0],
-        moyenne_generale: Math.round((Math.random() * 10 + 10) * 100) / 100,
-        rang: Math.floor(Math.random() * 25) + 1,
-        mention: 'Bien',
-        appreciation: 'Bon travail, continue ainsi'
-      };
+        trimestre: selectedTrimestre,
+        classe_id: selectedClasse
+      });
       
-      const response = await apiService.post('/bulletins', newBulletin);
       setBulletins([...bulletins, response.data]);
       alert('Bulletin généré avec succès!');
     } catch (error) {
@@ -77,259 +74,254 @@ const Bulletins = () => {
     }
   };
 
-  const downloadBulletin = (bulletin) => {
-    // Simulation de téléchargement PDF
-    alert(`Téléchargement du bulletin de ${getEleveNom(bulletin.eleve_id)} - ${bulletin.periode}`);
+  const downloadBulletin = async (bulletinId) => {
+    try {
+      const response = await apiService.get(`/bulletins/${bulletinId}/download`, {
+        responseType: 'blob'
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bulletin_${bulletinId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      console.error('Erreur lors du téléchargement:', error);
+      alert('Erreur lors du téléchargement du bulletin');
+    }
   };
 
-  if (loading) {
-    return <div style={styles.loading}>Chargement...</div>;
-  }  return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>Gestion des Bulletins</h1>
-      
-      <div style={styles.filtersContainer}>
-        <div style={styles.filterGroup}>
-          <label style={styles.label}>Classe</label>
-          <select
-            value={selectedClasse}
-            onChange={(e) => setSelectedClasse(e.target.value)}
-            style={styles.select}
-          >
-            <option value="">Toutes les classes</option>
-            {classes.map(classe => (
-              <option key={classe.id} value={classe.id}>
-                {classe.nom}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div style={styles.filterGroup}>
-          <label style={styles.label}>Période</label>
-          <select
-            value={selectedPeriode}
-            onChange={(e) => setSelectedPeriode(e.target.value)}
-            style={styles.select}
-          >
-            {periodes.map(periode => (
-              <option key={periode} value={periode}>
-                {periode}
-              </option>
-            ))}
-          </select>
-        </div>
-      </div>
-
-      <div style={styles.actionsContainer}>
-        <button 
-          onClick={() => {
-            if (selectedClasse) {
-              const elevesClasse = eleves.filter(e => e.classe_id === selectedClasse);
-              if (elevesClasse.length > 0) {
-                generateBulletin(elevesClasse[0].id);
-              }
-            } else {
-              alert('Veuillez sélectionner une classe');
-            }
-          }}
-          style={styles.generateButton}
-        >
-          Générer les bulletins
-        </button>
-      </div>      <div style={styles.bulletinsContainer}>
-        <h2>Bulletins disponibles ({filteredBulletins.length})</h2>
-        {filteredBulletins.length === 0 ? (
-          <p style={styles.noData}>Aucun bulletin trouvé pour les critères sélectionnés</p>
-        ) : (
-          <div style={styles.bulletinsList}>
-            {filteredBulletins.map(bulletin => (
-              <div key={bulletin.id} style={styles.bulletinCard}>
-                <div style={styles.bulletinHeader}>
-                  <h3>{getEleveNom(bulletin.eleve_id)}</h3>
-                  <span style={styles.classe}>{getClasseNom(bulletin.eleve_id)}</span>
-                </div>
-                
-                <div style={styles.bulletinDetails}>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Période:</span>
-                    <span>{bulletin.periode}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Moyenne générale:</span>
-                    <span style={styles.moyenne}>{bulletin.moyenne_generale}/20</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Rang:</span>
-                    <span>{bulletin.rang}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Mention:</span>
-                    <span style={styles.mention}>{bulletin.mention}</span>
-                  </div>
-                  <div style={styles.detailRow}>
-                    <span style={styles.detailLabel}>Date de génération:</span>
-                    <span>{bulletin.date_generation}</span>
-                  </div>
-                </div>
-
-                <div style={styles.bulletinActions}>
-                  <button 
-                    onClick={() => downloadBulletin(bulletin)}
-                    style={styles.downloadButton}
-                  >
-                    📄 Télécharger PDF
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+  const filteredEleves = eleves.filter(eleve =>
+    eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase())
   );
-};
 
-const styles = {
-  container: {
-    padding: '2rem',
-    minHeight: '100vh',
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-    position: 'relative'
-  },
-  title: {
-    fontSize: '2.5rem',
-    fontWeight: '800',
-    color: 'white',
-    marginBottom: '2rem',
-    textAlign: 'center',
-    background: 'linear-gradient(45deg, #ffffff, #e0e7ff)',
-    WebkitBackgroundClip: 'text',
-    WebkitTextFillColor: 'transparent',
-    backgroundClip: 'text'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px'
-  },
-  filtersContainer: {
-    display: 'flex',
-    gap: '1.5rem',
-    background: 'rgba(255, 255, 255, 0.95)',
-    backdropFilter: 'blur(20px)',
-    padding: '2rem',
-    borderRadius: '1.5rem',
-    boxShadow: '0 20px 40px rgba(0, 0, 0, 0.1)',
-    border: '1px solid rgba(255, 255, 255, 0.2)',
-    marginBottom: '1.5rem'
-  },
-  filterGroup: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },
-  select: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
-  },
-  actionsContainer: {
-    backgroundColor: 'white',
-    padding: '20px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '30px',
-    textAlign: 'center'
-  },
-  generateButton: {
-    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-    color: 'white',
-    border: 'none',
-    padding: '1rem 2.5rem',
-    borderRadius: '1rem',
-    cursor: 'pointer',
-    fontSize: '1rem',
-    fontWeight: '600',
-    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-    boxShadow: '0 4px 15px rgba(16, 185, 129, 0.3)'
-  },
-  bulletinsContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '40px'
-  },
-  bulletinsList: {
-    display: 'grid',
-    gridTemplateColumns: 'repeat(auto-fill, minmax(400px, 1fr))',
-    gap: '20px',
-    marginTop: '20px'
-  },
-  bulletinCard: {
-    border: '1px solid #e0e0e0',
-    borderRadius: '8px',
-    padding: '20px',
-    backgroundColor: '#fafafa'
-  },  bulletinHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '15px',
-    paddingBottom: '10px',
-    borderBottom: '1px solid #ddd'
-  },
-  classe: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    padding: '4px 8px',
-    borderRadius: '4px',
-    fontSize: '12px'
-  },
-  bulletinDetails: {
-    marginBottom: '20px'
-  },
-  detailRow: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginBottom: '8px'
-  },
-  detailLabel: {
-    fontWeight: '500',
-    color: '#555'
-  },
-  moyenne: {
-    fontWeight: 'bold',
-    color: '#28a745'
-  },
-  mention: {
-    fontWeight: 'bold',
-    color: '#007bff'
-  },
-  bulletinActions: {
-    textAlign: 'center'
-  },
-  downloadButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '8px 16px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px'
+  const columns = [
+    {
+      key: 'nom',
+      label: 'Élève',
+      render: (value, row) => (
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-medium">
+            {getInitials(row.prenom, value)}
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{formatFullName(row.prenom, value)}</div>
+            <div className="text-sm text-gray-500">{formatEmail(row.email)}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'classe_nom',
+      label: 'Classe',
+      render: (value) => (
+        <Badge variant="info">{value}</Badge>
+      )
+    },
+    {
+      key: 'moyenne_generale',
+      label: 'Moyenne',
+      render: (value) => {
+        if (!value) return <span className="text-gray-400">Non calculée</span>;
+        const moyenne = parseFloat(value);
+        return (
+          <Badge variant={moyenne >= 10 ? 'success' : 'danger'}>
+            {moyenne.toFixed(2)}/20
+          </Badge>
+        );
+      }
+    },
+    {
+      key: 'bulletin_status',
+      label: 'Bulletin',
+      render: (value, row) => {
+        const hasBulletin = bulletins.some(b => 
+          b.eleve_id === row.id && 
+          b.trimestre === selectedTrimestre
+        );
+        
+        return hasBulletin ? (
+          <Badge variant="success">Généré</Badge>
+        ) : (
+          <Badge variant="warning">À générer</Badge>
+        );
+      }
+    }
+  ];
+
+  const actions = [
+    {
+      icon: FileText,
+      label: 'Générer bulletin',
+      onClick: (eleve) => generateBulletin(eleve.id),
+      variant: 'default'
+    },
+    {
+      icon: Download,
+      label: 'Télécharger',
+      onClick: (eleve) => {
+        const bulletin = bulletins.find(b => 
+          b.eleve_id === eleve.id && 
+          b.trimestre === selectedTrimestre
+        );
+        if (bulletin) {
+          downloadBulletin(bulletin.id);
+        } else {
+          alert('Bulletin non généré pour cet élève');
+        }
+      },
+      variant: 'default'
+    }
+  ];
+
+  // Statistiques
+  const totalEleves = eleves.length;
+  const bulletinsGeneres = selectedTrimestre ? 
+    bulletins.filter(b => b.trimestre === selectedTrimestre).length : 0;
+  const tauxCompletion = totalEleves > 0 ? 
+    Math.round((bulletinsGeneres / totalEleves) * 100) : 0;
+  const moyenneClasse = eleves.length > 0 ? 
+    Math.round((eleves.reduce((sum, e) => sum + (e.moyenne_generale || 0), 0) / eleves.length) * 100) / 100 : 0;
+
+  const pageActions = [
+    {
+      label: 'Générer tous les bulletins',
+      icon: FileText,
+      onClick: () => {
+        if (!selectedTrimestre) {
+          alert('Veuillez sélectionner un trimestre');
+          return;
+        }
+        filteredEleves.forEach(eleve => generateBulletin(eleve.id));
+      },
+      variant: 'primary'
+    }
+  ];
+
+  if (loading) {
+    return (
+      <PageLayout title="Gestion des Bulletins" icon={FileText}>
+        <Loading text="Chargement des bulletins..." />
+      </PageLayout>
+    );
   }
+
+  return (
+    <PageLayout
+      title="Gestion des Bulletins"
+      subtitle="Générez et gérez les bulletins de notes des élèves"
+      icon={FileText}
+      actions={selectedClasse && selectedTrimestre ? pageActions : []}
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+    >
+      {/* Sélection classe et trimestre */}
+      <Card title="Paramètres de génération" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Classe *
+            </label>
+            <select
+              value={selectedClasse}
+              onChange={(e) => setSelectedClasse(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sélectionner une classe</option>
+              {classes.map(classe => (
+                <option key={classe.id} value={classe.id}>
+                  {classe.nom}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Trimestre *
+            </label>
+            <select
+              value={selectedTrimestre}
+              onChange={(e) => setSelectedTrimestre(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Sélectionner un trimestre</option>
+              {trimestres.map(trimestre => (
+                <option key={trimestre} value={trimestre}>
+                  {trimestre}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+      </Card>
+
+      {selectedClasse && selectedTrimestre && (
+        <>
+          {/* Statistiques */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+            <StatsCard
+              title="Total Élèves"
+              value={totalEleves}
+              icon={Users}
+              color="blue"
+            />
+            <StatsCard
+              title="Bulletins Générés"
+              value={bulletinsGeneres}
+              icon={FileText}
+              color="green"
+              trend={`${tauxCompletion}% complété`}
+            />
+            <StatsCard
+              title="Moyenne Classe"
+              value={`${moyenneClasse}/20`}
+              icon={Award}
+              color="orange"
+              trend={moyenneClasse >= 10 ? "Satisfaisant" : "À améliorer"}
+            />
+            <StatsCard
+              title="Progression"
+              value={`${tauxCompletion}%`}
+              icon={TrendingUp}
+              color="purple"
+              trend={tauxCompletion === 100 ? "Terminé" : "En cours"}
+            />
+          </div>
+
+          {/* Liste des élèves */}
+          <Card title={`Bulletins - ${classes.find(c => c.id == selectedClasse)?.nom} - ${selectedTrimestre}`}>
+            {filteredEleves.length === 0 ? (
+              <EmptyState
+                title="Aucun élève trouvé"
+                description="Aucun élève n'est inscrit dans cette classe ou ne correspond à votre recherche."
+                icon={Users}
+              />
+            ) : (
+              <Table
+                columns={columns}
+                data={filteredEleves}
+                actions={actions}
+              />
+            )}
+          </Card>
+        </>
+      )}
+
+      {!selectedClasse || !selectedTrimestre ? (
+        <Card>
+          <EmptyState
+            title="Sélectionnez une classe et un trimestre"
+            description="Pour gérer les bulletins, veuillez d'abord sélectionner une classe et un trimestre."
+            icon={FileText}
+          />
+        </Card>
+      ) : null}
+    </PageLayout>
+  );
 };
 
 export default Bulletins;

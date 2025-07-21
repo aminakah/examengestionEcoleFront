@@ -261,9 +261,9 @@ const SaisieNotesAmelioree = () => {
   const stats = calculateStatistiques();
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 my-10  ">
       {/* En-tête */}
-      <div className="bg-white rounded-lg shadow p-6">
+      <div className="bg-white rounded-lg shadow p-6 mb-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold text-gray-800 flex items-center">
             <BookOpen className="mr-3 text-blue-500" />

@@ -1,17 +1,23 @@
 import React, { useState, useEffect } from 'react';
+import { BookOpen, Plus, Edit, Trash2, Clock, Users } from 'lucide-react';
 import { apiService } from '../services/apiService';
+import PageLayout from '../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { getInitial } from '../utils/formatters';
 
 const GestionMatieres = () => {
   const [matieres, setMatieres] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingMatiere, setEditingMatiere] = useState(null);
+  const [searchTerm, setSearchTerm] = useState('');
   const [formData, setFormData] = useState({
     nom: '',
+    code: '',
     coefficient: 1,
-    niveau: ''
+    couleur: '#3B82F6',
+    description: ''
   });
-
-  const niveaux = ['6ème', '5ème', '4ème', '3ème'];
 
   useEffect(() => {
     loadMatieres();
@@ -38,232 +44,331 @@ const GestionMatieres = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await apiService.post('/matieres', formData);
-      setMatieres([...matieres, response.data]);
-      setShowForm(false);
-      setFormData({ nom: '', coefficient: 1, niveau: '' });
-      alert('Matière ajoutée avec succès!');
+      if (editingMatiere) {
+        const response = await apiService.put(`/matieres/${editingMatiere.id}`, formData);
+        setMatieres(matieres.map(matiere => 
+          matiere.id === editingMatiere.id ? response.data : matiere
+        ));
+      } else {
+        const response = await apiService.post('/matieres', formData);
+        setMatieres([...matieres, response.data]);
+      }
+      resetForm();
+      alert(editingMatiere ? 'Matière modifiée avec succès!' : 'Matière ajoutée avec succès!');
     } catch (error) {
-      console.error('Erreur lors de l\'ajout:', error);
-      alert('Erreur lors de l\'ajout de la matière');
+      console.error('Erreur lors de la sauvegarde:', error);
+      alert('Erreur lors de la sauvegarde de la matière');
     }
-  };  if (loading) {
-    return <div style={styles.loading}>Chargement...</div>;
+  };
+
+  const handleEdit = (matiere) => {
+    setEditingMatiere(matiere);
+    setFormData({
+      nom: matiere.nom,
+      code: matiere.code,
+      coefficient: matiere.coefficient,
+      couleur: matiere.couleur || '#3B82F6',
+      description: matiere.description || ''
+    });
+    setShowForm(true);
+  };
+
+  const handleDelete = async (matiere) => {
+    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
+      try {
+        await apiService.delete(`/matieres/${matiere.id}`);
+        setMatieres(matieres.filter(m => m.id !== matiere.id));
+        alert('Matière supprimée avec succès!');
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        alert('Erreur lors de la suppression de la matière');
+      }
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      nom: '',
+      code: '',
+      coefficient: 1,
+      couleur: '#3B82F6',
+      description: ''
+    });
+    setEditingMatiere(null);
+    setShowForm(false);
+  };
+
+  const filteredMatieres = matieres.filter(matiere =>
+    matiere.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    matiere.code.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const columns = [
+    {
+      key: 'nom',
+      label: 'Matière',
+      render: (value, row) => (
+        <div className="flex items-center space-x-3">
+          <div 
+            className="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+            style={{ backgroundColor: row.couleur || '#3B82F6' }}
+          >
+            {getInitial(row.code)}
+          </div>
+          <div>
+            <div className="font-medium text-gray-900">{value || 'Matière non renseignée'}</div>
+            <div className="text-sm text-gray-500">{row.code || 'Code non renseigné'}</div>
+          </div>
+        </div>
+      )
+    },
+    {
+      key: 'coefficient',
+      label: 'Coefficient',
+      render: (value) => (
+        <Badge variant={value >= 3 ? 'warning' : 'info'}>
+          Coef. {value}
+        </Badge>
+      )
+    },
+    {
+      key: 'description',
+      label: 'Description',
+      render: (value) => (
+        <span className="text-sm text-gray-600">
+          {value || 'Aucune description'}
+        </span>
+      )
+    },
+    {
+      key: 'enseignants_count',
+      label: 'Enseignants',
+      render: (value) => (
+        <div className="flex items-center space-x-1 text-sm text-gray-600">
+          <Users className="w-4 h-4" />
+          <span>{value || 0} enseignant(s)</span>
+        </div>
+      )
+    }
+  ];
+
+  const actions = [
+    {
+      icon: Edit,
+      label: 'Modifier',
+      onClick: handleEdit,
+      variant: 'default'
+    },
+    {
+      icon: Trash2,
+      label: 'Supprimer',
+      onClick: handleDelete,
+      variant: 'danger'
+    }
+  ];
+
+  const pageActions = [
+    {
+      label: 'Ajouter une matière',
+      icon: Plus,
+      onClick: () => setShowForm(true),
+      variant: 'primary'
+    }
+  ];
+
+  // Statistiques
+  const totalMatieres = matieres.length;
+  const coefficientMoyen = totalMatieres > 0 
+    ? Math.round((matieres.reduce((sum, m) => sum + m.coefficient, 0) / totalMatieres) * 10) / 10 
+    : 0;
+
+  // Couleurs prédéfinies
+  const couleursPredefinies = [
+    '#3B82F6', '#10B981', '#F59E0B', '#EF4444', 
+    '#8B5CF6', '#F97316', '#06B6D4', '#84CC16'
+  ];
+
+  if (loading) {
+    return (
+      <PageLayout title="Gestion des Matières" icon={BookOpen}>
+        <Loading text="Chargement des matières..." />
+      </PageLayout>
+    );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h1>Gestion des Matières</h1>
-        <button 
-          onClick={() => setShowForm(!showForm)}
-          style={styles.addButton}
-        >
-          {showForm ? 'Annuler' : 'Ajouter une matière'}
-        </button>
+    <PageLayout
+      title="Gestion des Matières"
+      subtitle={`${totalMatieres} matière(s) • Coefficient moyen: ${coefficientMoyen}`}
+      icon={BookOpen}
+      actions={pageActions}
+      searchValue={searchTerm}
+      onSearchChange={(e) => setSearchTerm(e.target.value)}
+    >
+      {/* Statistiques */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <StatsCard
+          title="Total Matières"
+          value={totalMatieres}
+          icon={BookOpen}
+          color="blue"
+        />
+        <StatsCard
+          title="Coefficient Moyen"
+          value={coefficientMoyen}
+          icon={Clock}
+          color="orange"
+          trend="Équilibré"
+        />
+        <StatsCard
+          title="Disciplines"
+          value={Math.ceil(totalMatieres / 2)}
+          icon={Users}
+          color="purple"
+          trend="Variées"
+        />
       </div>
 
+      {/* Formulaire d'ajout/modification */}
       {showForm && (
-        <div style={styles.formContainer}>
-          <h2>Ajouter une nouvelle matière</h2>
-          <form onSubmit={handleSubmit} style={styles.form}>
-            <div style={styles.formRow}>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Nom de la matière</label>
-                <input
-                  type="text"
-                  name="nom"
-                  value={formData.nom}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  placeholder="Ex: Mathématiques"
-                  required
-                />
+        <Card 
+          title={editingMatiere ? 'Modifier la matière' : 'Ajouter une nouvelle matière'} 
+          className="mb-6"
+        >
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Nom de la matière *
+                  </label>
+                  <input
+                    type="text"
+                    name="nom"
+                    value={formData.nom}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Ex: Mathématiques, Français..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Code matière *
+                  </label>
+                  <input
+                    type="text"
+                    name="code"
+                    value={formData.code}
+                    onChange={handleInputChange}
+                    required
+                    placeholder="Ex: MATH, FR, ANG..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Coefficient *
+                  </label>
+                  <input
+                    type="number"
+                    name="coefficient"
+                    value={formData.coefficient}
+                    onChange={handleInputChange}
+                    min="1"
+                    max="10"
+                    required
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-              <div style={styles.formGroup}>
-                <label style={styles.label}>Coefficient</label>
-                <input
-                  type="number"
-                  name="coefficient"
-                  value={formData.coefficient}
-                  onChange={handleInputChange}
-                  style={styles.input}
-                  min="1"
-                  max="10"
-                  required
-                />
+              
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Couleur de la matière
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {couleursPredefinies.map(couleur => (
+                      <button
+                        key={couleur}
+                        type="button"
+                        onClick={() => setFormData({...formData, couleur})}
+                        className={`w-8 h-8 rounded-full border-2 transition-all ${
+                          formData.couleur === couleur 
+                            ? 'border-gray-800 scale-110' 
+                            : 'border-gray-300 hover:scale-105'
+                        }`}
+                        style={{ backgroundColor: couleur }}
+                      />
+                    ))}
+                  </div>
+                  <input
+                    type="color"
+                    name="couleur"
+                    value={formData.couleur}
+                    onChange={handleInputChange}
+                    className="w-full h-10 border border-gray-300 rounded-lg"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
+                    rows={4}
+                    placeholder="Description de la matière..."
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
               </div>
-            </div>            <div style={styles.formGroup}>
-              <label style={styles.label}>Niveau</label>
-              <select
-                name="niveau"
-                value={formData.niveau}
-                onChange={handleInputChange}
-                style={styles.input}
-                required
-              >
-                <option value="">Sélectionner un niveau</option>
-                {niveaux.map(niveau => (
-                  <option key={niveau} value={niveau}>
-                    {niveau}
-                  </option>
-                ))}
-              </select>
             </div>
 
-            <button type="submit" style={styles.submitButton}>
-              Ajouter la matière
-            </button>
+            <div className="flex justify-end space-x-3 pt-6 border-t">
+              <button
+                type="button"
+                onClick={resetForm}
+                className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="px-6 py-2 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg hover:from-blue-600 hover:to-blue-700 transition-all hover:scale-105"
+              >
+                {editingMatiere ? 'Modifier' : 'Ajouter'}
+              </button>
+            </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div style={styles.tableContainer}>
-        <h2>Liste des matières ({matieres.length})</h2>
-        {matieres.length === 0 ? (
-          <p style={styles.noData}>Aucune matière créée</p>
+      {/* Liste des matières */}
+      <Card title="Liste des matières">
+        {filteredMatieres.length === 0 ? (
+          <EmptyState
+            title="Aucune matière trouvée"
+            description="Commencez par ajouter des matières à votre programme scolaire."
+            icon={BookOpen}
+            action={() => setShowForm(true)}
+            actionLabel="Ajouter une matière"
+          />
         ) : (
-          <div style={styles.tableWrapper}>
-            <table style={styles.table}>
-              <thead>
-                <tr style={styles.tableHeader}>
-                  <th style={styles.th}>Nom</th>
-                  <th style={styles.th}>Coefficient</th>
-                  <th style={styles.th}>Niveau</th>
-                  <th style={styles.th}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {matieres.map(matiere => (
-                  <tr key={matiere.id} style={styles.tableRow}>
-                    <td style={styles.td}>{matiere.nom}</td>
-                    <td style={styles.td}>{matiere.coefficient}</td>
-                    <td style={styles.td}>{matiere.niveau}</td>
-                    <td style={styles.td}>
-                      <button style={styles.actionButton}>Modifier</button>
-                      <button style={{...styles.actionButton, backgroundColor: '#dc3545'}}>
-                        Supprimer
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <Table
+            columns={columns}
+            data={filteredMatieres}
+            actions={actions}
+          />
         )}
-      </div>
-    </div>
+      </Card>
+    </PageLayout>
   );
-};const styles = {
-  container: {
-    padding: '20px',
-    maxWidth: '1200px'
-  },
-  header: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '30px'
-  },
-  addButton: {
-    backgroundColor: '#28a745',
-    color: 'white',
-    border: 'none',
-    padding: '10px 20px',
-    borderRadius: '4px',
-    cursor: 'pointer'
-  },
-  loading: {
-    textAlign: 'center',
-    padding: '50px',
-    fontSize: '18px'
-  },
-  formContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    marginBottom: '30px'
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px'
-  },
-  formRow: {
-    display: 'flex',
-    gap: '20px'
-  },
-  formGroup: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column'
-  },
-  label: {
-    marginBottom: '8px',
-    fontWeight: '500',
-    color: '#333'
-  },  input: {
-    padding: '10px',
-    border: '1px solid #ddd',
-    borderRadius: '4px',
-    fontSize: '14px'
-  },
-  submitButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '12px 24px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '16px',
-    alignSelf: 'flex-start'
-  },
-  tableContainer: {
-    backgroundColor: 'white',
-    padding: '30px',
-    borderRadius: '8px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-  },
-  noData: {
-    textAlign: 'center',
-    color: '#666',
-    fontStyle: 'italic',
-    padding: '40px'
-  },
-  tableWrapper: {
-    overflowX: 'auto'
-  },
-  table: {
-    width: '100%',
-    borderCollapse: 'collapse'
-  },
-  tableHeader: {
-    backgroundColor: '#f8f9fa'
-  },
-  th: {
-    padding: '12px',
-    textAlign: 'left',
-    borderBottom: '2px solid #ddd',
-    fontWeight: '600'
-  },
-  tableRow: {
-    borderBottom: '1px solid #eee'
-  },
-  td: {
-    padding: '12px',
-    borderBottom: '1px solid #eee'
-  },
-  actionButton: {
-    backgroundColor: '#007bff',
-    color: 'white',
-    border: 'none',
-    padding: '6px 12px',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '12px',
-    marginRight: '8px'
-  }
 };
 
 export default GestionMatieres;

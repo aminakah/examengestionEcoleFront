@@ -33,19 +33,6 @@ import '../styles/dashboard.css';
 const Dashboard = () => {
   const [activeItem, setActiveItem] = useState('dashboard');
 
-  const menuItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'students', label: 'Étudiants', icon: Users },
-    { id: 'teachers', label: 'Enseignants', icon: UserCheck },
-    { id: 'courses', label: 'Cours', icon: BookOpen },
-    { id: 'classes', label: 'Classes', icon: School },
-    { id: 'schedule', label: 'Planning', icon: Calendar },
-    { id: 'grades', label: 'Notes', icon: Award },
-    { id: 'attendance', label: 'Présence', icon: ClipboardList },
-    { id: 'messages', label: 'Messages', icon: MessageSquare },
-    { id: 'reports', label: 'Rapports', icon: BarChart3 },
-    { id: 'settings', label: 'Paramètres', icon: Settings }
-  ];
 
   const statsData = [
     {

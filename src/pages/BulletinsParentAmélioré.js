@@ -1,190 +1,127 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
+import { 
+  User, Download, Eye, Calendar, TrendingUp, TrendingDown, 
+  Award, BookOpen, BarChart3, Mail, Phone, MapPin, Home
+} from 'lucide-react';
 import { apiService } from '../services/apiService';
-import { PDFService } from '../services/pdfService';
-import { Download, Eye, Calendar, BookOpen, TrendingUp, User, Mail, Phone, MapPin } from 'lucide-react';
+import PageLayout from '../components/PageLayout';
+import { Card, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
+import { getInitials, formatFullName, formatDate, formatEmail, formatPhone, getInitial } from '../utils/formatters';
 
-const BulletinsParent = () => {
-  const { user } = useAuth();
+const BulletinsParentAmélioré = () => {
   const [enfants, setEnfants] = useState([]);
-  const [selectedEnfant, setSelectedEnfant] = useState(null);
-  const [notes, setNotes] = useState([]);
+  const [bulletins, setBulletins] = useState([]);
+  const [selectedEnfant, setSelectedEnfant] = useState('');
+  const [selectedTrimestre, setSelectedTrimestre] = useState('');
   const [loading, setLoading] = useState(true);
-  const [selectedPeriode, setSelectedPeriode] = useState('Trimestre 1');
 
-  const periodes = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
+  const trimestres = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
 
   useEffect(() => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedEnfant) {
+      loadBulletins();
+    }
+  }, [selectedEnfant, selectedTrimestre]);
+
   const loadData = async () => {
     try {
-      setLoading(true);
-      // Simuler la récupération des enfants du parent connecté
-      const elevesRes = await apiService.get('/eleves');
-      const notesRes = await apiService.get('/notes');
+      // Simuler le chargement des enfants du parent connecté
+      const response = await apiService.get('/parent/enfants');
+      setEnfants(response.data);
       
-      // Filtrer les enfants du parent connecté (simulation)
-      const mesEnfants = elevesRes.data.filter(eleve => 
-        eleve.parent_email === user.email
-      );
-      
-      setEnfants(mesEnfants);
-      setNotes(notesRes.data);
-      
-      if (mesEnfants.length > 0 && !selectedEnfant) {
-        setSelectedEnfant(mesEnfants[0]);
+      if (response.data.length > 0) {
+        setSelectedEnfant(response.data[0].id);
       }
     } catch (error) {
-      console.error('Erreur chargement données:', error);
+      console.error('Erreur lors du chargement:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  const getNotesForEnfant = (enfantId, periode) => {
-    return notes.filter(note => 
-      note.eleve_id === enfantId && 
-      note.periode === periode
-    ).map(note => ({
-      matiere: note.matiere_nom || 'Matière',
-      note: note.note || 0,
-      coefficient: note.coefficient || 1,
-      appreciation: note.appreciation || 'Aucune appréciation',
-      date_saisie: note.date_saisie || new Date().toISOString()
-    }));
+  const loadBulletins = async () => {
+    if (!selectedEnfant) return;
+    
+    try {
+      const params = new URLSearchParams();
+      params.append('eleve_id', selectedEnfant);
+      if (selectedTrimestre) params.append('trimestre', selectedTrimestre);
+      
+      const response = await apiService.get(`/parent/bulletins?${params}`);
+      setBulletins(response.data);
+    } catch (error) {
+      console.error('Erreur lors du chargement des bulletins:', error);
+    }
   };
 
-  const downloadBulletin = async (enfant, periode) => {
+  const downloadBulletin = async (bulletinId) => {
     try {
-      const enfantNotes = getNotesForEnfant(enfant.id, periode);
+      const response = await apiService.get(`/bulletins/${bulletinId}/download`, {
+        responseType: 'blob'
+      });
       
-      if (enfantNotes.length === 0) {
-        alert(`Aucune note disponible pour ${periode}`);
-        return;
-      }
-
-      const enfantData = {
-        ...enfant,
-        classe: enfant.classe_nom || 'Classe non définie'
-      };
-
-      const doc = PDFService.generateBulletinPDF(
-        enfantData, 
-        enfantNotes, 
-        periode
-      );
-
-      const filename = `Bulletin_${enfant.nom}_${enfant.prenom}_${periode.replace(/\s+/g, '_')}.pdf`;
-      PDFService.downloadPDF(doc, filename);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `bulletin_${bulletinId}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
-      console.error('Erreur téléchargement bulletin:', error);
+      console.error('Erreur lors du téléchargement:', error);
       alert('Erreur lors du téléchargement du bulletin');
     }
   };
 
-  const previewBulletin = (enfant, periode) => {
-    const enfantNotes = getNotesForEnfant(enfant.id, periode);
-    
-    if (enfantNotes.length === 0) {
-      alert(`Aucune note disponible pour ${periode}`);
-      return;
+  const enfantSelectionne = enfants.find(e => e.id == selectedEnfant);
+  const bulletinActuel = bulletins.find(b => b.trimestre === selectedTrimestre);
+
+  // Calculs des statistiques
+  const moyenneGenerale = bulletinActuel?.moyenne_generale || 0;
+  const evolutionMoyenne = bulletinActuel?.evolution || 0;
+  const nombreMatieres = bulletinActuel?.notes?.length || 0;
+  const matieresReussies = bulletinActuel?.notes?.filter(n => n.moyenne >= 10).length || 0;
+
+  const pageActions = bulletinActuel ? [
+    {
+      label: 'Télécharger le bulletin',
+      icon: Download,
+      onClick: () => downloadBulletin(bulletinActuel.id),
+      variant: 'primary'
     }
-
-    const enfantData = {
-      ...enfant,
-      classe: enfant.classe_nom || 'Classe non définie'
-    };
-
-    const doc = PDFService.generateBulletinPDF(
-      enfantData, 
-      enfantNotes, 
-      periode
-    );
-
-    PDFService.openPDFInNewTab(doc);
-  };
-
-  const getStatistiques = (enfant) => {
-    const toutesLesNotes = notes.filter(note => note.eleve_id === enfant.id);
-    
-    const moyennesParPeriode = periodes.map(periode => {
-      const notesperiode = getNotesForEnfant(enfant.id, periode);
-      return {
-        periode,
-        moyenne: notesperiode.length > 0 ? PDFService.calculateMoyenne(notesperiode) : 0,
-        nombreNotes: notesperiode.length
-      };
-    });
-
-    return {
-      moyennesParPeriode,
-      totalNotes: toutesLesNotes.length,
-      moyenneGenerale: moyennesParPeriode.reduce((sum, p) => sum + parseFloat(p.moyenne), 0) / moyennesParPeriode.filter(p => p.moyenne > 0).length || 0
-    };
-  };
+  ] : [];
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-        <span className="ml-3">Chargement...</span>
-      </div>
+      <PageLayout title="Bulletins de Notes" icon={User}>
+        <Loading text="Chargement des bulletins..." />
+      </PageLayout>
     );
   }
-
-  if (enfants.length === 0) {
-    return (
-      <div className="text-center py-12 bg-white rounded-lg shadow">
-        <User className="mx-auto h-12 w-12 text-gray-400" />
-        <h3 className="mt-2 text-sm font-medium text-gray-900">Aucun enfant trouvé</h3>
-        <p className="mt-1 text-sm text-gray-500">
-          Aucun enfant n'est associé à votre compte parent.
-        </p>
-      </div>
-    );
-  }
-
-  const stats = selectedEnfant ? getStatistiques(selectedEnfant) : null;
-  const notesEnfant = selectedEnfant ? getNotesForEnfant(selectedEnfant.id, selectedPeriode) : [];
 
   return (
-    <div className="max-w-6xl mx-auto p-6 space-y-6">
-      {/* En-tête Parent */}
-      <div className="bg-white rounded-lg shadow-lg p-6">
-        <div className="flex items-center justify-between">
+    <PageLayout
+      title="Bulletins de Notes"
+      subtitle="Consultez les résultats scolaires de vos enfants"
+      icon={User}
+      actions={pageActions}
+      showSearch={false}
+    >
+      {/* Sélection enfant et trimestre */}
+      <Card title="Sélection" className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <h1 className="text-2xl font-bold text-gray-800">
-              Espace Parent - {user.name}
-            </h1>
-            <p className="text-gray-600 mt-1">
-              Consultez les résultats scolaires de vos enfants
-            </p>
-          </div>
-          <div className="text-right text-sm text-gray-500">
-            <div className="flex items-center">
-              <Mail className="w-4 h-4 mr-1" />
-              {user.email}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sélection Enfant */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex items-center space-x-4">
-          <div className="flex-1">
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Sélectionner un enfant
+              Enfant
             </label>
             <select
-              value={selectedEnfant?.id || ''}
-              onChange={(e) => {
-                const enfant = enfants.find(e => e.id.toString() === e.target.value);
-                setSelectedEnfant(enfant);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedEnfant}
+              onChange={(e) => setSelectedEnfant(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               {enfants.map(enfant => (
                 <option key={enfant.id} value={enfant.id}>
@@ -193,184 +130,232 @@ const BulletinsParent = () => {
               ))}
             </select>
           </div>
-          <div className="flex-1">
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Période
+              Trimestre
             </label>
             <select
-              value={selectedPeriode}
-              onChange={(e) => setSelectedPeriode(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={selectedTrimestre}
+              onChange={(e) => setSelectedTrimestre(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              {periodes.map(periode => (
-                <option key={periode} value={periode}>{periode}</option>
+              <option value="">Sélectionner un trimestre</option>
+              {trimestres.map(trimestre => (
+                <option key={trimestre} value={trimestre}>
+                  {trimestre}
+                </option>
               ))}
             </select>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {selectedEnfant && (
+      {enfantSelectionne && (
         <>
-          {/* Informations Enfant */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <User className="w-5 h-5 mr-2 text-blue-500" />
-              Informations de l'élève
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Nom complet</dt>
-                <dd className="text-sm text-gray-900">{selectedEnfant.prenom} {selectedEnfant.nom}</dd>
+          {/* Informations de l'enfant */}
+          <Card title="Informations de l'élève" className="mb-6">
+            <div className="flex items-start space-x-6">
+              <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
+                {getInitials(enfantSelectionne.prenom, enfantSelectionne.nom)}
               </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Classe</dt>
-                <dd className="text-sm text-gray-900">{selectedEnfant.classe_nom}</dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Date de naissance</dt>
-                <dd className="text-sm text-gray-900">
-                  {selectedEnfant.date_naissance ? new Date(selectedEnfant.date_naissance).toLocaleDateString('fr-FR') : 'Non renseignée'}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-sm font-medium text-gray-500">Email</dt>
-                <dd className="text-sm text-gray-900">{selectedEnfant.email}</dd>
-              </div>
-            </div>
-          </div>
-
-          {/* Statistiques */}
-          {stats && (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {stats.moyennesParPeriode.map(periode => (
-                <div key={periode.periode} className="bg-white rounded-lg shadow p-6">
-                  <div className="flex items-center">
-                    <div className="flex-1">
-                      <p className="text-sm font-medium text-gray-600">{periode.periode}</p>
-                      <p className="text-2xl font-bold text-gray-900">
-                        {periode.moyenne > 0 ? `${periode.moyenne}/20` : 'N/A'}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        {periode.nombreNotes} note{periode.nombreNotes > 1 ? 's' : ''}
-                      </p>
+              
+              <div className="flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      {formatFullName(enfantSelectionne.prenom, enfantSelectionne.nom)}
+                    </h3>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Home className="w-4 h-4 text-gray-400" />
+                        <span>Classe: <strong>{enfantSelectionne.classe_nom || 'Non renseignée'}</strong></span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="w-4 h-4 text-gray-400" />
+                        <span>Né(e) le: {formatDate(enfantSelectionne.date_naissance)}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <Mail className="w-4 h-4 text-gray-400" />
+                        <span>{formatEmail(enfantSelectionne.email)}</span>
+                      </div>
                     </div>
-                    <div className={`p-2 rounded-full ${
-                      parseFloat(periode.moyenne) >= 10 ? 'bg-green-100' : 'bg-red-100'
-                    }`}>
-                      <TrendingUp className={`w-6 h-6 ${
-                        parseFloat(periode.moyenne) >= 10 ? 'text-green-600' : 'text-red-600'
-                      }`} />
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Contact</h4>
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center space-x-2">
+                        <Phone className="w-4 h-4 text-gray-400" />
+                        <span>{formatPhone(enfantSelectionne.telephone_parent)}</span>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <MapPin className="w-4 h-4 text-gray-400" />
+                        <span>{enfantSelectionne.adresse || 'Adresse non renseignée'}</span>
+                      </div>
                     </div>
                   </div>
                 </div>
-              ))}
+              </div>
             </div>
+          </Card>
+
+          {selectedTrimestre && bulletinActuel && (
+            <>
+              {/* Statistiques générales */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <StatsCard
+                  title="Moyenne Générale"
+                  value={`${moyenneGenerale.toFixed(2)}/20`}
+                  icon={Award}
+                  color={moyenneGenerale >= 10 ? 'green' : 'red'}
+                  trend={evolutionMoyenne > 0 ? `+${evolutionMoyenne.toFixed(2)}` : evolutionMoyenne.toFixed(2)}
+                  trendDirection={evolutionMoyenne >= 0 ? 'up' : 'down'}
+                />
+                <StatsCard
+                  title="Matières"
+                  value={nombreMatieres}
+                  icon={BookOpen}
+                  color="blue"
+                  trend={`${matieresReussies} réussies`}
+                />
+                <StatsCard
+                  title="Rang dans la classe"
+                  value={bulletinActuel.rang || '-'}
+                  icon={BarChart3}
+                  color="purple"
+                  trend={`/${bulletinActuel.effectif_classe || '-'} élèves`}
+                />
+                <StatsCard
+                  title="Progression"
+                  value={evolutionMoyenne >= 0 ? 'Positive' : 'À améliorer'}
+                  icon={evolutionMoyenne >= 0 ? TrendingUp : TrendingDown}
+                  color={evolutionMoyenne >= 0 ? 'green' : 'orange'}
+                  trend={Math.abs(evolutionMoyenne).toFixed(2) + ' pts'}
+                />
+              </div>
+
+              {/* Détail des notes par matière */}
+              <Card title={`Détail des notes - ${selectedTrimestre}`}>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Matière
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Moyenne
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Coefficient
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Moyenne Classe
+                        </th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Appréciation
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {bulletinActuel.notes?.map((note, index) => (
+                        <tr key={index} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="flex items-center space-x-3">
+                              <div 
+                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                                style={{ backgroundColor: note.matiere_couleur || '#3B82F6' }}
+                              >
+                                {getInitial(note.matiere_code) || 'M'}
+                              </div>
+                              <div>
+                                <div className="font-medium text-gray-900">{note.matiere_nom}</div>
+                                <div className="text-sm text-gray-500">{note.enseignant_nom}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <Badge variant={note.moyenne >= 10 ? 'success' : 'danger'}>
+                              {note.moyenne?.toFixed(2) || '-'}/20
+                            </Badge>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                            {note.coefficient}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                            {note.moyenne_classe?.toFixed(2) || '-'}/20
+                          </td>
+                          <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
+                            {note.appreciation || 'Aucune appréciation'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+
+              {/* Appréciations générales */}
+              {bulletinActuel.appreciation_generale && (
+                <Card title="Appréciation générale" className="mt-6">
+                  <div className="bg-blue-50 p-6 rounded-lg">
+                    <p className="text-gray-800 leading-relaxed">
+                      {bulletinActuel.appreciation_generale}
+                    </p>
+                    <div className="mt-4 text-sm text-gray-600">
+                      <strong>Professeur principal:</strong> {bulletinActuel.professeur_principal}
+                    </div>
+                  </div>
+                </Card>
+              )}
+
+              {/* Conseils et recommandations */}
+              {bulletinActuel.conseils && (
+                <Card title="Conseils et recommandations" className="mt-6">
+                  <div className="bg-green-50 p-6 rounded-lg">
+                    <p className="text-gray-800 leading-relaxed">
+                      {bulletinActuel.conseils}
+                    </p>
+                  </div>
+                </Card>
+              )}
+            </>
           )}
 
-          {/* Actions Bulletins */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <Calendar className="w-5 h-5 mr-2 text-blue-500" />
-              Bulletins disponibles
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {periodes.map(periode => {
-                const notesDisponibles = getNotesForEnfant(selectedEnfant.id, periode).length > 0;
-                
-                return (
-                  <div key={periode} className={`border rounded-lg p-4 ${
-                    notesDisponibles ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
-                  }`}>
-                    <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-medium text-gray-800">{periode}</h4>
-                      <span className={`px-2 py-1 text-xs rounded-full ${
-                        notesDisponibles 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-gray-100 text-gray-800'
-                      }`}>
-                        {notesDisponibles ? 'Disponible' : 'En attente'}
-                      </span>
-                    </div>
-                    {notesDisponibles && (
-                      <div className="space-y-2">
-                        <button
-                          onClick={() => previewBulletin(selectedEnfant, periode)}
-                          className="w-full flex items-center justify-center px-3 py-2 text-sm border border-blue-300 text-blue-700 rounded-md hover:bg-blue-50"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          Aperçu
-                        </button>
-                        <button
-                          onClick={() => downloadBulletin(selectedEnfant, periode)}
-                          className="w-full flex items-center justify-center px-3 py-2 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Télécharger PDF
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          {selectedTrimestre && !bulletinActuel && (
+            <Card>
+              <EmptyState
+                title="Bulletin non disponible"
+                description={`Le bulletin du ${selectedTrimestre} n'est pas encore disponible pour ${enfantSelectionne.prenom}.`}
+                icon={Calendar}
+              />
+            </Card>
+          )}
 
-          {/* Dernières Notes */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4 flex items-center">
-              <BookOpen className="w-5 h-5 mr-2 text-blue-500" />
-              Notes de {selectedPeriode}
-            </h3>
-            {notesEnfant.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Matière</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Note</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Coefficient</th>
-                      <th className="text-left py-3 px-4 font-medium text-gray-600">Appréciation</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {notesEnfant.map((note, index) => (
-                      <tr key={index} className="border-b hover:bg-gray-50">
-                        <td className="py-3 px-4 text-gray-800">{note.matiere}</td>
-                        <td className="py-3 px-4">
-                          <span className={`px-2 py-1 rounded-full text-sm ${
-                            note.note >= 10 
-                              ? 'bg-green-100 text-green-800' 
-                              : 'bg-red-100 text-red-800'
-                          }`}>
-                            {note.note}/20
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-gray-600">{note.coefficient}</td>
-                        <td className="py-3 px-4 text-gray-600">{note.appreciation}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-                <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-800">
-                    <strong>Moyenne {selectedPeriode}: </strong>
-                    {PDFService.calculateMoyenne(notesEnfant)}/20 - 
-                    <span className="ml-2">{PDFService.getMention(PDFService.calculateMoyenne(notesEnfant))}</span>
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <BookOpen className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-                <p>Aucune note disponible pour {selectedPeriode}</p>
-              </div>
-            )}
-          </div>
+          {!selectedTrimestre && (
+            <Card>
+              <EmptyState
+                title="Sélectionnez un trimestre"
+                description="Choisissez un trimestre pour consulter le bulletin de notes."
+                icon={Calendar}
+              />
+            </Card>
+          )}
         </>
       )}
-    </div>
+
+      {enfants.length === 0 && (
+        <Card>
+          <EmptyState
+            title="Aucun enfant trouvé"
+            description="Aucun enfant n'est associé à votre compte parent."
+            icon={User}
+          />
+        </Card>
+      )}
+    </PageLayout>
   );
 };
 
-export default BulletinsParent;
+export default BulletinsParentAmélioré;
