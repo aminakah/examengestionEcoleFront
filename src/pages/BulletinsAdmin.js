@@ -8,6 +8,17 @@ import PageLayout from '../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitials, formatFullName } from '../utils/formatters';
 
+// Import sécurisé des services avec fallback
+let bulletinService;
+try {
+  bulletinService = require('../services').bulletinService;
+} catch (error) {
+  console.warn('Service bulletinService non disponible, utilisation d\'apiService');
+  bulletinService = {
+    getBulletinsAdmin: () => apiService.get('/admin/bulletins')
+  };
+}
+
 const BulletinsAdmin = () => {
   const [bulletins, setBulletins] = useState([]);
   const [statistiques, setStatistiques] = useState({});
@@ -36,15 +47,30 @@ const BulletinsAdmin = () => {
 
   const loadData = async () => {
     try {
+      console.log('Chargement des données...');
+      
       const [bulletinsRes, classesRes] = await Promise.all([
-        apiService.get('/admin/bulletins'),
+        bulletinService.getBulletinsAdmin(),
         apiService.get('/classes')
       ]);
       
-      setBulletins(bulletinsRes.data);
-      setClasses(classesRes.data);
+      console.log('Bulletins reçus:', bulletinsRes);
+      console.log('Classes reçues:', classesRes);
+      
+      // Sécuriser l'accès aux données
+      const bulletinsData = bulletinsRes?.data || [];
+      const classesData = classesRes?.data || [];
+      
+      console.log('Bulletins traités:', bulletinsData);
+      console.log('Type des bulletins:', typeof bulletinsData, Array.isArray(bulletinsData));
+      
+      setBulletins(bulletinsData);
+      setClasses(classesData);
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      // En cas d'erreur, initialiser avec des tableaux vides
+      setBulletins([]);
+      setClasses([]);
     } finally {
       setLoading(false);
     }
@@ -116,11 +142,21 @@ const BulletinsAdmin = () => {
   };
 
   const filteredBulletins = bulletins.filter(bulletin => {
-    const matchesSearch = bulletin.eleve_nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bulletin.eleve_prenom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         bulletin.classe_nom?.toLowerCase().includes(searchTerm.toLowerCase());
+    // Sécuriser l'accès aux propriétés pour éviter les erreurs d'objets
+    const eleveName = bulletin.eleve?.user?.name || bulletin.eleve_nom || '';
+    const elevePrenom = bulletin.eleve?.user?.prenom || bulletin.eleve_prenom || '';
+    const classeNom = bulletin.classe?.nom || bulletin.classe_nom || '';
     
-    const matchesPeriode = !selectedPeriode || bulletin.periode === selectedPeriode;
+    const matchesSearch = eleveName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         elevePrenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         classeNom.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    // Gérer le cas où periode peut être un objet ou une chaîne
+    const periodeValue = typeof bulletin.periode === 'object' ? 
+      (bulletin.periode?.nom || bulletin.periode?.type || '') : 
+      (bulletin.periode || '');
+    
+    const matchesPeriode = !selectedPeriode || periodeValue === selectedPeriode;
     const matchesClasse = !selectedClasse || bulletin.classe_id == selectedClasse;
     
     return matchesSearch && matchesPeriode && matchesClasse;
@@ -130,28 +166,41 @@ const BulletinsAdmin = () => {
     {
       key: 'eleve_nom',
       label: 'Élève',
-      render: (value, row) => (
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-            {getInitials(row.eleve_prenom, value)}
-          </div>
-          <div>
-            <div className="font-medium text-gray-900">
-              {formatFullName(row.eleve_prenom, value)}
+      render: (value, row) => {
+        // Sécuriser l'accès aux données d'élève
+        const prenom = row.eleve?.user?.prenom || row.eleve_prenom || '';
+        const nom = row.eleve?.user?.nom || row.eleve_nom || value || '';
+        const classeNom = row.classe?.nom || row.classe_nom || 'Classe non renseignée';
+        
+        return (
+          <div className="flex items-center space-x-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
+              {getInitials(prenom, nom)}
             </div>
-            <div className="text-sm text-gray-500">
-              {row.classe_nom || 'Classe non renseignée'}
+            <div>
+              <div className="font-medium text-gray-900">
+                {formatFullName(prenom, nom)}
+              </div>
+              <div className="text-sm text-gray-500">
+                {classeNom}
+              </div>
             </div>
           </div>
-        </div>
-      )
+        );
+      }
     },
     {
       key: 'periode',
       label: 'Période',
-      render: (value) => (
-        <Badge variant="info">{value}</Badge>
-      )
+      render: (value) => {
+        // Si value est un objet période, utiliser value.nom, sinon utiliser value directement
+        const periodeText = typeof value === 'object' && value !== null ? 
+          (value.nom || value.type || 'Période') : 
+          value || 'Non définie';
+        return (
+          <Badge variant="info">{periodeText}</Badge>
+        );
+      }
     },
     {
       key: 'moyenne_generale',
@@ -171,14 +220,14 @@ const BulletinsAdmin = () => {
     {
       key: 'statut',
       label: 'Statut',
-      render: (value) => {
+      render: (value,row) => {
         const statuts = {
           'en_attente': { label: 'En attente', variant: 'warning', icon: AlertCircle },
           'approuve': { label: 'Approuvé', variant: 'success', icon: CheckCircle },
           'rejete': { label: 'Rejeté', variant: 'danger', icon: AlertCircle }
         };
         
-        const statut = statuts[value] || statuts['en_attente'];
+        const statut = statuts[row.statut] || statuts['en_attente'];
         const IconComponent = statut.icon;
         
         return (
@@ -192,7 +241,16 @@ const BulletinsAdmin = () => {
     {
       key: 'date_generation',
       label: 'Date de génération',
-      render: (value) => new Date(value).toLocaleDateString('fr-FR')
+      render: (value,row) => {
+        if (!row.genere_le) return <span className="text-gray-400">-</span>;
+        try {
+          // Si value est déjà une chaîne de date, l'utiliser directement
+          const dateValue = typeof row.genere_le === 'object' ? row.genere_le.toString() : row.genere_le;
+          return new Date(dateValue).toLocaleDateString('fr-FR');
+        } catch (error) {
+          return <span className="text-gray-400">Date invalide</span>;
+        }
+      }
     }
   ];
 
@@ -339,27 +397,31 @@ const BulletinsAdmin = () => {
       )}
 
       {/* Statistiques détaillées par classe */}
-      {statistiques.classes && (
+      {statistiques.classes && Array.isArray(statistiques.classes) && (
         <Card title="Statistiques par classe" className="mb-6">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {statistiques.classes.map(classe => (
               <div key={classe.id} className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-center justify-between mb-2">
-                  <h4 className="font-medium text-gray-900">{classe.nom}</h4>
-                  <Badge variant="info">{classe.total_bulletins}</Badge>
+                  <h4 className="font-medium text-gray-900">
+                    {classe.nom || 'Classe sans nom'}
+                  </h4>
+                  <Badge variant="info">{classe.total_bulletins || 0}</Badge>
                 </div>
                 <div className="space-y-1 text-sm text-gray-600">
                   <div className="flex justify-between">
                     <span>Moyenne classe:</span>
-                    <span className="font-medium">{classe.moyenne_classe}/20</span>
+                    <span className="font-medium">
+                      {classe.moyenne_classe ? `${classe.moyenne_classe}/20` : '-'}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Approuvés:</span>
-                    <span className="text-green-600">{classe.approuves}</span>
+                    <span className="text-green-600">{classe.approuves || 0}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>En attente:</span>
-                    <span className="text-orange-600">{classe.en_attente}</span>
+                    <span className="text-orange-600">{classe.en_attente || 0}</span>
                   </div>
                 </div>
               </div>

@@ -11,9 +11,18 @@ export class BulletinService {
    * Récupérer la liste des bulletins
    * @param {Object} params - Paramètres de filtrage (classe, periode, annee_scolaire, etc.)
    */
-  async getBulletins(params = {}) {
+  async getBulletinsAdmin(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     return api.get(`/bulletins${queryString ? `?${queryString}` : ''}`);
+  }
+
+   async getBulletinsEnfants(eleveId, trimestreId) {
+    console.log('Récupération bulletin pour:', { eleveId, trimestreId });
+    return api.get(`/parent/eleve/${eleveId}/bulletin/${trimestreId}`);
+  }
+     async mesEnfants(params = {}) {
+    const queryString = new URLSearchParams(params).toString();
+    return api.get(`/parent/mes-enfants${queryString ? `?${queryString}` : ''}`);
   }
 
   /**
@@ -32,15 +41,24 @@ export class BulletinService {
     return api.get(`/bulletins/${id}`);
   }
 
+
+ async getBulletins(id) {
+    return api.get(`/admin/bulletins`);
+  }
+
+   async getPeriod() {
+    return api.get(`/periodes`);
+  }
   /**
    * Télécharger un bulletin PDF
    * @param {number} id - ID du bulletin
    */
   async downloadBulletin(id) {
-    const response = await fetch(`/api/bulletins/${id}/telecharger`, {
+    const response = await fetch(`${api.baseURL}/bulletins/${id}/telecharger`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${api.token}`,
+        'Accept': 'application/pdf',
       },
     });
 
@@ -68,10 +86,11 @@ export class BulletinService {
   async downloadClassBulletins(params = {}) {
     const queryString = new URLSearchParams(params).toString();
     
-    const response = await fetch(`/api/bulletins/telecharger-groupe${queryString ? `?${queryString}` : ''}`, {
+    const response = await fetch(`${api.baseURL}/bulletins/telecharger-groupe${queryString ? `?${queryString}` : ''}`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${api.token}`,
+        'Accept': 'application/zip',
       },
     });
 

@@ -13,92 +13,54 @@ import {
   Save,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  AlertCircle,
+  Loader
 } from 'lucide-react';
 
+// Import des services API
+import { 
+  emploiTempsService, 
+  classeService, 
+  enseignantService, 
+  matiereService 
+} from '../services/emploiTempsService';
+import { api } from '../services/api';
+import notificationService from '../services/notificationService';
+
 const GestionEmploiDuTemps = () => {
+  // États pour les données
   const [selectedWeek, setSelectedWeek] = useState(new Date());
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Données d'exemple
-  const [classes] = useState([
-    { id: 1, nom: '6ème A' },
-    { id: 2, nom: '6ème B' },
-    { id: 3, nom: '5ème A' },
-    { id: 4, nom: '4ème A' },
-    { id: 5, nom: '3ème A' },
-    { id: 6, nom: '2nde A' },
-    { id: 7, nom: '1ère S' },
-    { id: 8, nom: 'Terminale S' }
-  ]);
+  // États pour les données de l'API
+  const [emploiDuTemps, setEmploiDuTemps] = useState([]);
+  const [classes, setClasses] = useState([]);
+  const [enseignants, setEnseignants] = useState([]);
+  const [matieres, setMatieres] = useState([]);
 
-  const [enseignants] = useState([
-    { id: 1, nom: 'Mme Diop', matiere: 'Mathématiques' },
-    { id: 2, nom: 'M. Sarr', matiere: 'Physique-Chimie' },
-    { id: 3, nom: 'Mme Fall', matiere: 'Français' },
-    { id: 4, nom: 'M. Ndiaye', matiere: 'Histoire-Géographie' },
-    { id: 5, nom: 'Mme Ba', matiere: 'Anglais' }
-  ]);
-
+  // Liste des salles (pourrait venir d'une API plus tard)
   const [salles] = useState([
     'Salle 101', 'Salle 102', 'Salle 103', 'Salle 201', 'Salle 202',
     'Labo Physique', 'Labo Chimie', 'Salle Info', 'CDI', 'Gymnase'
   ]);
 
-  const [emploiDuTemps, setEmploiDuTemps] = useState([
-    {
-      id: 1,
-      jour: 'Lundi',
-      heureDebut: '08:00',
-      heureFin: '09:30',
-      matiere: 'Mathématiques',
-      enseignant: 'Mme Diop',
-      classe: '6ème A',
-      salle: 'Salle 101'
-    },
-    {
-      id: 2,
-      jour: 'Lundi',
-      heureDebut: '09:45',
-      heureFin: '11:15',
-      matiere: 'Français',
-      enseignant: 'Mme Fall',
-      classe: '6ème A',
-      salle: 'Salle 102'
-    },
-    {
-      id: 3,
-      jour: 'Mardi',
-      heureDebut: '08:00',
-      heureFin: '09:30',
-      matiere: 'Physique-Chimie',
-      enseignant: 'M. Sarr',
-      classe: '1ère S',
-      salle: 'Labo Physique'
-    },
-    {
-      id: 4,
-      jour: 'Mercredi',
-      heureDebut: '10:00',
-      heureFin: '11:30',
-      matiere: 'Histoire-Géographie',
-      enseignant: 'M. Ndiaye',
-      classe: 'Terminale S',
-      salle: 'Salle 201'
-    }
-  ]);
-
   const [formData, setFormData] = useState({
     jour: 'Lundi',
-    heureDebut: '',
-    heureFin: '',
+    heure_debut: '',
+    heure_fin: '',
     matiere: '',
-    enseignant: '',
+    professeur: '',
     classe: '',
-    salle: ''
+    salle: '',
+    description: '',
+    statut: 'actif'
   });
 
   const jours = ['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi'];
@@ -108,6 +70,117 @@ const GestionEmploiDuTemps = () => {
     '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00'
   ];
 
+  // Hook pour charger les données initiales
+  useEffect(() => {
+    checkAuthAndLoadData();
+  }, []);
+
+  // Hook pour recharger l'emploi du temps quand les filtres changent
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadEmploiDuTemps();
+    }
+  }, [selectedFilter, isAuthenticated]);
+
+  // Fonction pour vérifier l'authentification et charger les données
+  const checkAuthAndLoadData = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Rafraîchir le token depuis localStorage
+      api.refreshToken();
+      
+      // Vérifier l'authentification
+      if (!api.isAuthenticated()) {
+        setError('Vous devez être connecté pour accéder à cette page.');
+        setIsAuthenticated(false);
+        return;
+      }
+
+      setIsAuthenticated(true);
+      await loadInitialData();
+      
+    } catch (error) {
+      console.error('Erreur lors de la vérification d\'authentification:', error);
+      setError('Erreur d\'authentification. Veuillez vous reconnecter.');
+      setIsAuthenticated(false);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Fonction pour charger toutes les données initiales
+  const loadInitialData = async () => {
+    try {
+      // Charger en parallèle toutes les données nécessaires
+      const [classesResponse, enseignantsResponse, matieresResponse] = await Promise.all([
+        classeService.getAll({ actif: true }),
+        enseignantService.getAll(),
+        matiereService.getAll()
+      ]);
+
+      // Traiter les réponses en tenant compte du format API
+      setClasses(classesResponse.data || classesResponse || []);
+      setEnseignants(enseignantsResponse.data || enseignantsResponse || []);
+      setMatieres(matieresResponse.data || matieresResponse || []);
+
+      // Charger l'emploi du temps
+      await loadEmploiDuTemps();
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      setError('Erreur lors du chargement des données');
+      notificationService.error('Erreur lors du chargement des données');
+    }
+  };
+
+  // Fonction pour charger l'emploi du temps
+  const loadEmploiDuTemps = async () => {
+    try {
+      const filters = {};
+      
+      if (selectedFilter !== 'all') {
+        filters.classe = selectedFilter;
+      }
+
+      const response = await emploiTempsService.getEmploiSemaine(filters);
+      
+      // Vérifier la structure de la réponse
+      console.log('Response from API:', response);
+      
+      // Transformer les données pour correspondre au format attendu
+      const emploisArray = [];
+      const emploiData = response.data || response; // S'adapter aux deux formats possibles
+      
+      Object.entries(emploiData).forEach(([jour, cours]) => {
+        if (Array.isArray(cours)) {
+          cours.forEach(coursItem => {
+            emploisArray.push({
+              id: coursItem.id,
+              jour: jour,
+              heureDebut: coursItem.heure_debut,
+              heureFin: coursItem.heure_fin,
+              matiere: coursItem.matiere,
+              enseignant: coursItem.professeur,
+              classe: coursItem.classe,
+              salle: coursItem.salle,
+              description: coursItem.description,
+              statut: coursItem.statut
+            });
+          });
+        }
+      });
+
+      setEmploiDuTemps(emploisArray);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement de l\'emploi du temps:', error);
+      notificationService.error('Erreur lors du chargement de l\'emploi du temps');
+    }
+  };
+
+  // Fonction pour filtrer les cours
   const filteredCourses = emploiDuTemps.filter(cours => {
     const matchesSearch = cours.matiere.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          cours.enseignant.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -117,56 +190,124 @@ const GestionEmploiDuTemps = () => {
     return matchesSearch && cours.classe === selectedFilter;
   });
 
-  const handleSubmit = (e) => {
+  // Fonction pour soumettre le formulaire
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
     
-    if (editingCourse) {
-      setEmploiDuTemps(prev => prev.map(cours =>
-        cours.id === editingCourse.id ? { ...formData, id: editingCourse.id } : cours
-      ));
-    } else {
-      const newCourse = {
-        ...formData,
-        id: Date.now()
+    try {
+      // Préparer les données pour l'API
+      const apiData = {
+        jour: formData.jour,
+        heure_debut: formData.heure_debut,
+        heure_fin: formData.heure_fin,
+        matiere: formData.matiere,
+        professeur: formData.professeur,
+        classe: formData.classe,
+        salle: formData.salle,
+        description: formData.description,
+        statut: formData.statut || 'actif'
       };
-      setEmploiDuTemps(prev => [...prev, newCourse]);
+      
+      if (editingCourse) {
+        // Mise à jour
+        const updateResponse = await emploiTempsService.update(editingCourse.id, apiData);
+        console.log('Update response:', updateResponse);
+        notificationService.success('Cours modifié avec succès');
+      } else {
+        // Création
+        const createResponse = await emploiTempsService.create(apiData);
+        console.log('Create response:', createResponse);
+        notificationService.success('Cours créé avec succès');
+      }
+      
+      // Recharger les données
+      await loadEmploiDuTemps();
+      resetForm();
+      
+    } catch (error) {
+      console.error('Erreur lors de la sauvegarde:', error);
+      
+      // Gestion des erreurs de validation
+      if (error.response?.status === 422) {
+        const errors = error.response.data.errors;
+        const errorMessages = Object.values(errors).flat();
+        notificationService.error(errorMessages.join(', '));
+      } else if (error.response?.data?.message) {
+        notificationService.error(error.response.data.message);
+      } else {
+        notificationService.error('Erreur lors de la sauvegarde du cours');
+      }
+    } finally {
+      setLoading(false);
     }
-    
-    resetForm();
   };
 
+  // Fonction pour réinitialiser le formulaire
   const resetForm = () => {
     setFormData({
       jour: 'Lundi',
-      heureDebut: '',
-      heureFin: '',
+      heure_debut: '',
+      heure_fin: '',
       matiere: '',
-      enseignant: '',
+      professeur: '',
       classe: '',
-      salle: ''
+      salle: '',
+      description: '',
+      statut: 'actif'
     });
     setEditingCourse(null);
     setShowModal(false);
   };
 
+  // Fonction pour éditer un cours
   const handleEdit = (cours) => {
-    setFormData(cours);
+    setFormData({
+      jour: cours.jour,
+      heure_debut: cours.heureDebut,
+      heure_fin: cours.heureFin,
+      matiere: cours.matiere,
+      professeur: cours.enseignant,
+      classe: cours.classe,
+      salle: cours.salle,
+      description: cours.description || '',
+      statut: cours.statut || 'actif'
+    });
     setEditingCourse(cours);
     setShowModal(true);
   };
 
-  const handleDelete = (id) => {
+  // Fonction pour supprimer un cours
+  const handleDelete = async (id) => {
     if (window.confirm('Êtes-vous sûr de vouloir supprimer ce cours ?')) {
-      setEmploiDuTemps(prev => prev.filter(cours => cours.id !== id));
+      setLoading(true);
+      
+      try {
+        const deleteResponse = await emploiTempsService.delete(id);
+        console.log('Delete response:', deleteResponse);
+        notificationService.success('Cours supprimé avec succès');
+        await loadEmploiDuTemps();
+      } catch (error) {
+        console.error('Erreur lors de la suppression:', error);
+        if (error.response?.data?.message) {
+          notificationService.error(error.response.data.message);
+        } else {
+          notificationService.error('Erreur lors de la suppression du cours');
+        }
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
+  // Fonction pour obtenir les cours d'un jour
   const getCoursForDay = (jour) => {
     return filteredCourses
       .filter(cours => cours.jour === jour)
       .sort((a, b) => a.heureDebut.localeCompare(b.heureDebut));
   };
 
+  // Fonction pour obtenir la couleur selon l'heure
   const getTimeColor = (heureDebut) => {
     const hour = parseInt(heureDebut.split(':')[0]);
     if (hour < 10) return 'bg-blue-100 text-blue-800';
@@ -175,8 +316,75 @@ const GestionEmploiDuTemps = () => {
     return 'bg-purple-100 text-purple-800';
   };
 
+  // Composant de chargement
+  const LoadingSpinner = () => (
+    <div className="flex items-center justify-center py-8">
+      <Loader className="w-8 h-8 animate-spin text-blue-600" />
+      <span className="ml-2 text-gray-600">Chargement...</span>
+    </div>
+  );
+
+  // Composant d'erreur
+  const ErrorDisplay = ({ message, onRetry }) => (
+    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+      <div className="flex items-center">
+        <AlertCircle className="w-5 h-5 text-red-600 mr-2" />
+        <span className="text-red-800">{message}</span>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="ml-auto bg-red-600 text-white px-4 py-2 rounded text-sm hover:bg-red-700"
+          >
+            Réessayer
+          </button>
+        )}
+      </div>
+    </div>
+  );
+
+  // Composant d'authentification manquante
+  const AuthenticationRequired = () => (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
+      <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full mx-4">
+        <div className="text-center">
+          <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <AlertCircle className="w-8 h-8 text-red-600" />
+          </div>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Authentification requise
+          </h2>
+          <p className="text-gray-600 mb-6">
+            Vous devez être connecté pour accéder à la gestion de l'emploi du temps.
+          </p>
+          <button
+            onClick={() => window.location.href = '/login'}
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Se connecter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Si l'utilisateur n'est pas authentifié, afficher le composant d'authentification
+  if (!loading && !isAuthenticated) {
+    return <AuthenticationRequired />;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 my-10 ">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 my-10">
+      {/* Affichage de l'erreur si présente */}
+      {error && (
+        <ErrorDisplay 
+          message={error} 
+          onRetry={() => {
+            setError(null);
+            checkAuthAndLoadData();
+          }} 
+        />
+      )}
+
       {/* Header */}
       <div className="flex justify-between items-center mb-8">
         <div>
@@ -189,7 +397,8 @@ const GestionEmploiDuTemps = () => {
         </div>
         <button
           onClick={() => setShowModal(true)}
-          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
+          disabled={loading}
+          className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Plus className="w-5 h-5" />
           <span>Nouveau Cours</span>
@@ -219,6 +428,7 @@ const GestionEmploiDuTemps = () => {
               value={selectedFilter}
               onChange={(e) => setSelectedFilter(e.target.value)}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={loading}
             >
               <option value="all">Toutes les classes</option>
               {classes.map(classe => (
@@ -229,92 +439,99 @@ const GestionEmploiDuTemps = () => {
         </div>
       </div>
 
+      {/* Affichage du chargement */}
+      {loading && <LoadingSpinner />}
+
       {/* Weekly Schedule */}
-      <div className="bg-white rounded-xl shadow-md overflow-hidden">
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold text-gray-900">Emploi du Temps Hebdomadaire</h2>
-            <div className="flex items-center space-x-4">
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <span className="text-sm font-medium text-gray-600">
-                Semaine du {selectedWeek.toLocaleDateString('fr-FR')}
-              </span>
-              <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
-                <ChevronRight className="w-5 h-5" />
-              </button>
+      {!loading && (
+        <div className="bg-white rounded-xl shadow-md overflow-hidden">
+          <div className="p-6 border-b border-gray-200">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-gray-900">Emploi du Temps Hebdomadaire</h2>
+              <div className="flex items-center space-x-4">
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-sm font-medium text-gray-600">
+                  Semaine du {selectedWeek.toLocaleDateString('fr-FR')}
+                </span>
+                <button className="p-2 text-gray-400 hover:text-gray-600 transition-colors">
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-5 gap-px bg-gray-200 min-w-max">
+              {jours.map(jour => (
+                <div key={jour} className="bg-white min-w-64">
+                  {/* Day Header */}
+                  <div className="bg-gray-50 p-4 border-b border-gray-200">
+                    <h3 className="font-semibold text-gray-900 text-center">{jour}</h3>
+                  </div>
+                  
+                  {/* Day Schedule */}
+                  <div className="p-4 space-y-3 min-h-96">
+                    {getCoursForDay(jour).map(cours => (
+                      <div
+                        key={cours.id}
+                        className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow bg-gradient-to-r from-blue-50 to-blue-100"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <div className={`px-2 py-1 rounded text-xs font-medium ${getTimeColor(cours.heureDebut)}`}>
+                            {cours.heureDebut} - {cours.heureFin}
+                          </div>
+                          <div className="flex space-x-1">
+                            <button
+                              onClick={() => handleEdit(cours)}
+                              disabled={loading}
+                              className="p-1 text-gray-400 hover:text-blue-600 transition-colors disabled:opacity-50"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(cours.id)}
+                              disabled={loading}
+                              className="p-1 text-gray-400 hover:text-red-600 transition-colors disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        <h4 className="font-semibold text-gray-900 mb-1">{cours.matiere}</h4>
+                        
+                        <div className="space-y-1 text-xs text-gray-600">
+                          <div className="flex items-center space-x-1">
+                            <User className="w-3 h-3" />
+                            <span>{cours.enseignant}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <BookOpen className="w-3 h-3" />
+                            <span>{cours.classe}</span>
+                          </div>
+                          <div className="flex items-center space-x-1">
+                            <MapPin className="w-3 h-3" />
+                            <span>{cours.salle}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    
+                    {getCoursForDay(jour).length === 0 && (
+                      <div className="text-center text-gray-400 py-8">
+                        <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Aucun cours planifié</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
-
-        <div className="overflow-x-auto">
-          <div className="grid grid-cols-5 gap-px bg-gray-200 min-w-max">
-            {jours.map(jour => (
-              <div key={jour} className="bg-white min-w-64">
-                {/* Day Header */}
-                <div className="bg-gray-50 p-4 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-900 text-center">{jour}</h3>
-                </div>
-                
-                {/* Day Schedule */}
-                <div className="p-4 space-y-3 min-h-96">
-                  {getCoursForDay(jour).map(cours => (
-                    <div
-                      key={cours.id}
-                      className="border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow bg-gradient-to-r from-blue-50 to-blue-100"
-                    >
-                      <div className="flex justify-between items-start mb-2">
-                        <div className={`px-2 py-1 rounded text-xs font-medium ${getTimeColor(cours.heureDebut)}`}>
-                          {cours.heureDebut} - {cours.heureFin}
-                        </div>
-                        <div className="flex space-x-1">
-                          <button
-                            onClick={() => handleEdit(cours)}
-                            className="p-1 text-gray-400 hover:text-blue-600 transition-colors"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(cours.id)}
-                            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-                      
-                      <h4 className="font-semibold text-gray-900 mb-1">{cours.matiere}</h4>
-                      
-                      <div className="space-y-1 text-xs text-gray-600">
-                        <div className="flex items-center space-x-1">
-                          <User className="w-3 h-3" />
-                          <span>{cours.enseignant}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <BookOpen className="w-3 h-3" />
-                          <span>{cours.classe}</span>
-                        </div>
-                        <div className="flex items-center space-x-1">
-                          <MapPin className="w-3 h-3" />
-                          <span>{cours.salle}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                  
-                  {getCoursForDay(jour).length === 0 && (
-                    <div className="text-center text-gray-400 py-8">
-                      <Calendar className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p className="text-sm">Aucun cours planifié</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Modal for Add/Edit Course */}
       {showModal && (
@@ -327,7 +544,8 @@ const GestionEmploiDuTemps = () => {
                 </h3>
                 <button
                   onClick={resetForm}
-                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                  disabled={loading}
+                  className="text-gray-400 hover:text-gray-600 transition-colors disabled:opacity-50"
                 >
                   <X className="w-6 h-6" />
                 </button>
@@ -344,6 +562,7 @@ const GestionEmploiDuTemps = () => {
                     onChange={(e) => setFormData({...formData, jour: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
+                    disabled={loading}
                   >
                     {jours.map(jour => (
                       <option key={jour} value={jour}>{jour}</option>
@@ -358,10 +577,11 @@ const GestionEmploiDuTemps = () => {
                       Heure de début
                     </label>
                     <select
-                      value={formData.heureDebut}
-                      onChange={(e) => setFormData({...formData, heureDebut: e.target.value})}
+                      value={formData.heure_debut}
+                      onChange={(e) => setFormData({...formData, heure_debut: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
+                      disabled={loading}
                     >
                       <option value="">Sélectionner</option>
                       {heures.map(heure => (
@@ -374,10 +594,11 @@ const GestionEmploiDuTemps = () => {
                       Heure de fin
                     </label>
                     <select
-                      value={formData.heureFin}
-                      onChange={(e) => setFormData({...formData, heureFin: e.target.value})}
+                      value={formData.heure_fin}
+                      onChange={(e) => setFormData({...formData, heure_fin: e.target.value})}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                       required
+                      disabled={loading}
                     >
                       <option value="">Sélectionner</option>
                       {heures.map(heure => (
@@ -387,19 +608,37 @@ const GestionEmploiDuTemps = () => {
                   </div>
                 </div>
 
-                {/* Subject */}
+                {/* Subject - Using API data or manual input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Matière
                   </label>
-                  <input
-                    type="text"
-                    value={formData.matiere}
-                    onChange={(e) => setFormData({...formData, matiere: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder="Ex: Mathématiques"
-                    required
-                  />
+                  {matieres.length > 0 ? (
+                    <select
+                      value={formData.matiere}
+                      onChange={(e) => setFormData({...formData, matiere: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      disabled={loading}
+                    >
+                      <option value="">Sélectionner une matière</option>
+                      {matieres.map(matiere => (
+                        <option key={matiere.id} value={matiere.nom}>
+                          {matiere.nom}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.matiere}
+                      onChange={(e) => setFormData({...formData, matiere: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Ex: Mathématiques"
+                      required
+                      disabled={loading}
+                    />
+                  )}
                 </div>
 
                 {/* Teacher */}
@@ -407,19 +646,33 @@ const GestionEmploiDuTemps = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Enseignant
                   </label>
-                  <select
-                    value={formData.enseignant}
-                    onChange={(e) => setFormData({...formData, enseignant: e.target.value})}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    required
-                  >
-                    <option value="">Sélectionner un enseignant</option>
-                    {enseignants.map(enseignant => (
-                      <option key={enseignant.id} value={enseignant.nom}>
-                        {enseignant.nom} - {enseignant.matiere}
-                      </option>
-                    ))}
-                  </select>
+                  {enseignants.length > 0 ? (
+                    <select
+                      value={formData.professeur}
+                      onChange={(e) => setFormData({...formData, professeur: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      required
+                      disabled={loading}
+                    >
+                      <option value="">Sélectionner un enseignant</option>
+                      {enseignants.map(enseignant => (
+                        <option key={enseignant.id} value={`${enseignant.user?.nom} ${enseignant.user?.prenom}`}>
+                          {enseignant.user?.nom} {enseignant.user?.prenom} 
+                          {enseignant.matieres?.[0] && ` - ${enseignant.matieres[0].nom}`}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={formData.professeur}
+                      onChange={(e) => setFormData({...formData, professeur: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Nom de l'enseignant"
+                      required
+                      disabled={loading}
+                    />
+                  )}
                 </div>
 
                 {/* Class */}
@@ -432,6 +685,7 @@ const GestionEmploiDuTemps = () => {
                     onChange={(e) => setFormData({...formData, classe: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
+                    disabled={loading}
                   >
                     <option value="">Sélectionner une classe</option>
                     {classes.map(classe => (
@@ -450,6 +704,7 @@ const GestionEmploiDuTemps = () => {
                     onChange={(e) => setFormData({...formData, salle: e.target.value})}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     required
+                    disabled={loading}
                   >
                     <option value="">Sélectionner une salle</option>
                     {salles.map(salle => (
@@ -458,20 +713,58 @@ const GestionEmploiDuTemps = () => {
                   </select>
                 </div>
 
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description (optionnel)
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({...formData, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="Description ou remarques sur le cours"
+                    rows="2"
+                    disabled={loading}
+                  />
+                </div>
+
+                {/* Status */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Statut
+                  </label>
+                  <select
+                    value={formData.statut}
+                    onChange={(e) => setFormData({...formData, statut: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    disabled={loading}
+                  >
+                    <option value="actif">Actif</option>
+                    <option value="annule">Annulé</option>
+                    <option value="reporte">Reporté</option>
+                  </select>
+                </div>
+
                 {/* Buttons */}
                 <div className="flex space-x-3 pt-4">
                   <button
                     type="button"
                     onClick={resetForm}
-                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
+                    disabled={loading}
+                    className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Annuler
                   </button>
                   <button
                     type="submit"
-                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+                    disabled={loading}
+                    className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <Save className="w-4 h-4" />
+                    {loading ? (
+                      <Loader className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Save className="w-4 h-4" />
+                    )}
                     <span>{editingCourse ? 'Modifier' : 'Créer'}</span>
                   </button>
                 </div>

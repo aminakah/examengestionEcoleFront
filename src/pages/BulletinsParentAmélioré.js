@@ -7,54 +7,82 @@ import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
 import { Card, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
 import { getInitials, formatFullName, formatDate, formatEmail, formatPhone, getInitial } from '../utils/formatters';
+import { bulletinService } from '../services';
+import { api } from '../services/api';
 
 const BulletinsParentAmélioré = () => {
   const [enfants, setEnfants] = useState([]);
+  const [trimestres, setTrimestres] = useState([]);
   const [bulletins, setBulletins] = useState([]);
   const [selectedEnfant, setSelectedEnfant] = useState('');
   const [selectedTrimestre, setSelectedTrimestre] = useState('');
   const [loading, setLoading] = useState(true);
+  const [loadingBulletins, setLoadingBulletins] = useState(false);
 
-  const trimestres = ['Trimestre 1', 'Trimestre 2', 'Trimestre 3'];
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEnfant) {
-      loadBulletins();
-    }
-  }, [selectedEnfant, selectedTrimestre]);
-
-  const loadData = async () => {
+ 
+ const loadData = async () => {
     try {
-      // Simuler le chargement des enfants du parent connecté
-      const response = await apiService.get('/parent/enfants');
-      setEnfants(response.data);
+      setLoading(true);
+      // Chargement des enfants du parent connecté
+      const response = await bulletinService.mesEnfants();
+      const periods = await bulletinService.getPeriod();
       
-      if (response.data.length > 0) {
-        setSelectedEnfant(response.data[0].id);
+      setEnfants(response.data || []);
+      setTrimestres(periods.data || []);
+      
+      // Sélection automatique du premier enfant et du premier trimestre
+      if (response.data && response.data.length > 0) {
+        const enfantId = response.data[0].id;
+        setSelectedEnfant(enfantId);
+        console.log("Enfant sélectionné automatiquement:", enfantId);
+      }
+      
+      if (periods.data && periods.data.length > 0) {
+        const trimestreId = periods.data[0].id;
+        setSelectedTrimestre(trimestreId);
+        console.log("Trimestre sélectionné automatiquement:", trimestreId);
       }
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
+      setEnfants([]);
+      setTrimestres([]);
     } finally {
       setLoading(false);
     }
   };
+  useEffect(() => {
+    loadData();
+  }, []);
 
+  
+useEffect(() => {
+  if (selectedEnfant && selectedTrimestre) {
+    loadBulletins();
+  }
+}, [selectedEnfant, selectedTrimestre]);
+
+
+ 
   const loadBulletins = async () => {
-    if (!selectedEnfant) return;
+    if (!selectedEnfant || !selectedTrimestre) {
+      console.log("Enfant ou trimestre non sélectionné");
+      setBulletins([]);
+      return;
+    }
     
     try {
-      const params = new URLSearchParams();
-      params.append('eleve_id', selectedEnfant);
-      if (selectedTrimestre) params.append('trimestre', selectedTrimestre);
+      setLoadingBulletins(true);
+      console.log('Chargement des bulletins pour:', { selectedEnfant, selectedTrimestre });
       
-      const response = await apiService.get(`/parent/bulletins?${params}`);
-      setBulletins(response.data);
+      const response = await bulletinService.getBulletinsEnfants(selectedEnfant, selectedTrimestre);
+      console.log('Réponse bulletins:', response);
+
+      setBulletins(Array.isArray(response.data) ? response.data : [response.data].filter(Boolean));
     } catch (error) {
       console.error('Erreur lors du chargement des bulletins:', error);
+      setBulletins([]);
+    } finally {
+      setLoadingBulletins(false);
     }
   };
 
@@ -78,13 +106,14 @@ const BulletinsParentAmélioré = () => {
   };
 
   const enfantSelectionne = enfants.find(e => e.id == selectedEnfant);
-  const bulletinActuel = bulletins.find(b => b.trimestre === selectedTrimestre);
+  const trimestreSelectionne = trimestres.find(t => t.id == selectedTrimestre);
+  const bulletinActuel = bulletins.find(b => b.trimestre_id == selectedTrimestre || b.trimestre === selectedTrimestre);
 
-  // Calculs des statistiques
+  // Calculs des statistiques avec vérifications de sécurité
   const moyenneGenerale = bulletinActuel?.moyenne_generale || 0;
   const evolutionMoyenne = bulletinActuel?.evolution || 0;
   const nombreMatieres = bulletinActuel?.notes?.length || 0;
-  const matieresReussies = bulletinActuel?.notes?.filter(n => n.moyenne >= 10).length || 0;
+  const matieresReussies = bulletinActuel?.notes?.filter(n => n?.moyenne >= 10).length || 0;
 
   const pageActions = bulletinActuel ? [
     {
@@ -125,7 +154,7 @@ const BulletinsParentAmélioré = () => {
             >
               {enfants.map(enfant => (
                 <option key={enfant.id} value={enfant.id}>
-                  {enfant.prenom} {enfant.nom} - {enfant.classe_nom}
+                  {enfant?.user?.prenom || 'Nom non disponible'} - {enfant?.inscriptions?.[0]?.classe?.nom || 'Classe non définie'}
                 </option>
               ))}
             </select>
@@ -142,8 +171,8 @@ const BulletinsParentAmélioré = () => {
             >
               <option value="">Sélectionner un trimestre</option>
               {trimestres.map(trimestre => (
-                <option key={trimestre} value={trimestre}>
-                  {trimestre}
+                <option key={trimestre.id} value={trimestre.id}>
+                  {trimestre.nom}
                 </option>
               ))}
             </select>
@@ -157,27 +186,27 @@ const BulletinsParentAmélioré = () => {
           <Card title="Informations de l'élève" className="mb-6">
             <div className="flex items-start space-x-6">
               <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white text-2xl font-bold">
-                {getInitials(enfantSelectionne.prenom, enfantSelectionne.nom)}
+                {getInitials(enfantSelectionne?.user?.prenom, enfantSelectionne?.user?.nom)}
               </div>
               
               <div className="flex-1">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <h3 className="text-xl font-bold text-gray-900 mb-4">
-                      {formatFullName(enfantSelectionne.prenom, enfantSelectionne.nom)}
+                      {formatFullName(enfantSelectionne?.user?.prenom, enfantSelectionne?.user?.nom)}
                     </h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center space-x-2">
                         <Home className="w-4 h-4 text-gray-400" />
-                        <span>Classe: <strong>{enfantSelectionne.classe_nom || 'Non renseignée'}</strong></span>
+                        <span>Classe: <strong>{enfantSelectionne?.inscriptions?.[0]?.classe?.nom || 'Non renseignée'}</strong></span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Calendar className="w-4 h-4 text-gray-400" />
-                        <span>Né(e) le: {formatDate(enfantSelectionne.date_naissance)}</span>
+                        <span>Né(e) le: {formatDate(enfantSelectionne?.user?.date_naissance)}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Mail className="w-4 h-4 text-gray-400" />
-                        <span>{formatEmail(enfantSelectionne.email)}</span>
+                        <span>{formatEmail(enfantSelectionne?.user?.email)}</span>
                       </div>
                     </div>
                   </div>
@@ -187,11 +216,11 @@ const BulletinsParentAmélioré = () => {
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center space-x-2">
                         <Phone className="w-4 h-4 text-gray-400" />
-                        <span>{formatPhone(enfantSelectionne.telephone_parent)}</span>
+                        <span>{formatPhone(enfantSelectionne?.user?.telephone)}</span>
                       </div>
                       <div className="flex items-center space-x-2">
                         <MapPin className="w-4 h-4 text-gray-400" />
-                        <span>{enfantSelectionne.adresse || 'Adresse non renseignée'}</span>
+                        <span>{enfantSelectionne?.user?.adresse || 'Adresse non renseignée'}</span>
                       </div>
                     </div>
                   </div>
@@ -200,7 +229,13 @@ const BulletinsParentAmélioré = () => {
             </div>
           </Card>
 
-          {selectedTrimestre && bulletinActuel && (
+          {selectedTrimestre && loadingBulletins && (
+            <Card>
+              <Loading text="Chargement du bulletin en cours..." />
+            </Card>
+          )}
+
+          {selectedTrimestre && !loadingBulletins && bulletinActuel && (
             <>
               {/* Statistiques générales */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -236,7 +271,7 @@ const BulletinsParentAmélioré = () => {
               </div>
 
               {/* Détail des notes par matière */}
-              <Card title={`Détail des notes - ${selectedTrimestre}`}>
+              <Card title={`Détail des notes - ${trimestreSelectionne?.nom || 'Trimestre sélectionné'}`}>
                 <div className="overflow-x-auto">
                   <table className="min-w-full">
                     <thead className="bg-gray-50">
@@ -323,11 +358,11 @@ const BulletinsParentAmélioré = () => {
             </>
           )}
 
-          {selectedTrimestre && !bulletinActuel && (
+          {selectedTrimestre && !loadingBulletins && !bulletinActuel && (
             <Card>
               <EmptyState
                 title="Bulletin non disponible"
-                description={`Le bulletin du ${selectedTrimestre} n'est pas encore disponible pour ${enfantSelectionne.prenom}.`}
+                description={`Le bulletin du ${trimestreSelectionne?.nom || 'trimestre sélectionné'} n'est pas encore disponible pour ${enfantSelectionne?.user?.prenom}.`}
                 icon={Calendar}
               />
             </Card>

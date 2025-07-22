@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { apiService } from '../services/apiService';
-import { NotificationService } from '../services/notificationService';
+import notificationService, { NotificationService } from '../services/notificationService';
 import { 
   BookOpen, 
   Save, 
@@ -192,7 +192,7 @@ const SaisieNotesAmelioree = () => {
             email: eleve.parent_email
           };
 
-          const result = await NotificationService.sendNewGradeNotification(
+          const result = await notificationService.sendNewGradeNotification(
             parent,
             eleve,
             matiereInfo?.nom || 'Matière',

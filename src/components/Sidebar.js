@@ -37,16 +37,20 @@ const Sidebar = () => {
         { path: '/enseignants', label: 'Gestion des enseignants', icon: UserCheck, roles: ['administrateur'] },
         { path: '/classes', label: 'Gestion des classes', icon: School, roles: ['administrateur'] },
         { path: '/matieres', label: 'Gestion des matières', icon: BookOpen, roles: ['administrateur'] },
-        { path: '/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['administrateur'] },
-        { path: '/documents', label: 'Gestion des documents', icon: Upload, roles: ['administrateur'] }
+        { path: '/admin/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['administrateur'] },
+        { path: '/admin/documents', label: 'Gestion des documents', icon: Upload, roles: ['administrateur'] },
+        { path: '/admin/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['administrateur', 'enseignant'] },
+        { path: '/admin/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] }
+
+
       );
     }
 
     // Items administrateur et enseignant
-    if (['administrateur', 'enseignant'].includes(user?.role)) {
+    if ([ 'enseignant'].includes(user?.role)) {
       items.push(
-        { path: '/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['administrateur', 'enseignant'] },
-        { path: '/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] }
+        { path: '/enseignant/notes', label: 'Saisie des notes', icon: ClipboardList, roles: [ 'enseignant'] },
+        { path: '/enseignant/bulletins', label: 'Bulletins', icon: Award, roles: [ 'enseignant'] }
       );
     }
 

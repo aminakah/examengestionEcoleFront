@@ -8,7 +8,7 @@ node_modules/
 
 # Production
 /build
-
+.md
 # Misc
 .DS_Store
 .env.local

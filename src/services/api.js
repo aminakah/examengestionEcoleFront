@@ -5,8 +5,11 @@
 
 class ApiService {
   constructor() {
-    this.baseURL = 'http://localhost:8000/api'; // Le proxy est configuré dans package.json
+    this.baseURL = 'http://localhost:8000/api';
     this.token = localStorage.getItem('authToken');
+    
+    // Debug: afficher le token
+    console.log('Token actuel:', this.token ? 'Token présent' : 'Aucun token');
   }
 
   // Configuration des headers par défaut
@@ -25,6 +28,11 @@ class ApiService {
 
   // Méthode générique pour les requêtes HTTP
   async request(method, endpoint, data = null, options = {}) {
+    // Vérifier si on a un token pour les routes protégées
+    if (!this.token && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+      throw new Error('Aucun token d\'authentification. Veuillez vous connecter.');
+    }
+
     const config = {
       method,
       headers: { ...this.getHeaders(), ...options.headers },
@@ -39,17 +47,29 @@ class ApiService {
       }
     }
 
+    const url = `${this.baseURL}${endpoint}`;
+    console.log(`📡 ${method} ${url}`, data ? { data } : '');
+
     try {
-      const response = await fetch(`${this.baseURL}${endpoint}`, config);
+      const response = await fetch(url, config);
       
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Gestion spécifique des erreurs d'authentification
+        if (response.status === 401) {
+          this.setToken(null); // Supprimer le token invalide
+          throw new Error('Session expirée. Veuillez vous reconnecter.');
+        }
+        
         throw new Error(errorData.message || `HTTP Error: ${response.status}`);
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log(`✅ ${method} ${url} - Success:`, result);
+      return result;
     } catch (error) {
-      console.error(`API Error - ${method} ${endpoint}:`, error);
+      console.error(`❌ API Error - ${method} ${endpoint}:`, error);
       throw error;
     }
   }
@@ -76,14 +96,25 @@ class ApiService {
     this.token = token;
     if (token) {
       localStorage.setItem('authToken', token);
+      console.log('✅ Token mis à jour');
     } else {
       localStorage.removeItem('authToken');
+      console.log('🗑️ Token supprimé');
     }
   }
 
   // Méthode pour vérifier le statut de connexion
   isAuthenticated() {
-    return !!this.token;
+    const hasToken = !!this.token;
+    console.log('🔐 Statut authentification:', hasToken ? 'Connecté' : 'Non connecté');
+    return hasToken;
+  }
+
+  // Méthode pour rafraîchir le token depuis localStorage
+  refreshToken() {
+    this.token = localStorage.getItem('authToken');
+    console.log('🔄 Token rafraîchi:', this.token ? 'Token présent' : 'Aucun token');
+    return this.token;
   }
 }
 
