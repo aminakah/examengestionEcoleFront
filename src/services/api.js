@@ -9,7 +9,6 @@ class ApiService {
     this.token = localStorage.getItem('authToken');
     
     // Debug: afficher le token
-    console.log('Token actuel:', this.token ? 'Token présent' : 'Aucun token');
   }
 
   // Configuration des headers par défaut
@@ -48,7 +47,6 @@ class ApiService {
     }
 
     const url = `${this.baseURL}${endpoint}`;
-    console.log(`📡 ${method} ${url}`, data ? { data } : '');
 
     try {
       const response = await fetch(url, config);
@@ -66,7 +64,6 @@ class ApiService {
       }
 
       const result = await response.json();
-      console.log(`✅ ${method} ${url} - Success:`, result);
       return result;
     } catch (error) {
       console.error(`❌ API Error - ${method} ${endpoint}:`, error);
@@ -96,24 +93,20 @@ class ApiService {
     this.token = token;
     if (token) {
       localStorage.setItem('authToken', token);
-      console.log('✅ Token mis à jour');
     } else {
       localStorage.removeItem('authToken');
-      console.log('🗑️ Token supprimé');
     }
   }
 
   // Méthode pour vérifier le statut de connexion
   isAuthenticated() {
     const hasToken = !!this.token;
-    console.log('🔐 Statut authentification:', hasToken ? 'Connecté' : 'Non connecté');
     return hasToken;
   }
 
   // Méthode pour rafraîchir le token depuis localStorage
   refreshToken() {
     this.token = localStorage.getItem('authToken');
-    console.log('🔄 Token rafraîchi:', this.token ? 'Token présent' : 'Aucun token');
     return this.token;
   }
 }

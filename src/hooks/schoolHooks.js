@@ -285,34 +285,53 @@ export const useDashboard = () => {
       setLoading(true);
       setError(null);
       
-      // Charger le tableau de bord personnalisé
+      // Charger le tableau de bord principal (disponible pour tous)
       const mainDashboard = await dashboardService.getMyDashboard();
       
-      // Charger les statistiques spécifiques au rôle
-      let roleSpecificStats = {};
-      if (user) {
-        switch (user.role) {
-          case 'admin':
-            roleSpecificStats = await dashboardService.getGeneralStats();
-            break;
-          case 'enseignant':
-            roleSpecificStats = await dashboardService.getTeacherStats();
-            break;
-          case 'eleve':
-            roleSpecificStats = await dashboardService.getStudentStats();
-            break;
-          case 'parent':
-            roleSpecificStats = await dashboardService.getParentStats();
-            break;
+      // Préparer les données avec la structure attendue
+      let dashboardPayload = {
+        main: mainDashboard.data || mainDashboard,
+        roleSpecific: null
+      };
+
+      // Charger les statistiques spécifiques au rôle si administrateur
+      if (user?.role === 'administrateur') {
+        try {
+          const adminStats = await dashboardService.getGeneralStats();
+          dashboardPayload.adminStats = adminStats.data || adminStats;
+        } catch (adminError) {
+          console.warn('Statistiques admin non disponibles:', adminError.message);
+          // Continuer sans les stats admin si l'endpoint n'existe pas encore
         }
       }
 
-      setDashboardData({
-        main: mainDashboard.data || mainDashboard,
-        roleSpecific: roleSpecificStats.data || roleSpecificStats
-      });
+      // Charger les statistiques spécifiques aux autres rôles
+      if (user) {
+        try {
+          switch (user.role) {
+            case 'enseignant':
+              const teacherStats = await dashboardService.getTeacherStats();
+              dashboardPayload.roleSpecific = teacherStats.data || teacherStats;
+              break;
+            case 'eleve':
+              const studentStats = await dashboardService.getStudentStats();
+              dashboardPayload.roleSpecific = studentStats.data || studentStats;
+              break;
+            case 'parent':
+              const parentStats = await dashboardService.getParentStats();
+              dashboardPayload.roleSpecific = parentStats.data || parentStats;
+              break;
+          }
+        } catch (roleError) {
+          console.warn(`Statistiques ${user.role} non disponibles:`, roleError.message);
+          // Continuer sans les stats spécifiques au rôle
+        }
+      }
+
+      setDashboardData(dashboardPayload);
     } catch (err) {
       setError(err.message);
+      console.error('Erreur lors du chargement du dashboard:', err);
     } finally {
       setLoading(false);
     }

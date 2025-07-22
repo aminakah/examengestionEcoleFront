@@ -17,7 +17,6 @@ export class BulletinService {
   }
 
    async getBulletinsEnfants(eleveId, trimestreId) {
-    console.log('Récupération bulletin pour:', { eleveId, trimestreId });
     return api.get(`/parent/eleve/${eleveId}/bulletin/${trimestreId}`);
   }
      async mesEnfants(params = {}) {

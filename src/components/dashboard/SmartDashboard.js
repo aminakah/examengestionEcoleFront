@@ -2,6 +2,8 @@ import React from 'react';
 import { useDashboard } from '../../hooks/schoolHooks';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../LoadingSpinner';
+import { da } from 'date-fns/locale';
+import AdminDashboard from './AdminDashboardOptimized';
 
 /**
  * Composant Dashboard intelligent qui s'adapte au rôle de l'utilisateur
@@ -9,6 +11,7 @@ import LoadingSpinner from '../LoadingSpinner';
 export default function SmartDashboard() {
   const { user } = useAuth();
   const { dashboardData, loading, error, refresh } = useDashboard();
+  console.log(dashboardData)
 
   if (loading) {
     return <LoadingSpinner />;
@@ -34,7 +37,7 @@ export default function SmartDashboard() {
   // Rendu spécifique selon le rôle
   const renderRoleSpecificDashboard = () => {
     switch (user?.role) {
-      case 'admin':
+      case 'administrateur':
         return <AdminDashboard data={dashboardData} />;
       case 'enseignant':
         return <TeacherDashboard data={dashboardData} />;
@@ -84,84 +87,298 @@ export default function SmartDashboard() {
 /**
  * Dashboard Administrateur
  */
-function AdminDashboard({ data }) {
-  const stats = data?.roleSpecific || {};
+function AdminDasshboard({ data }) {
+  const stats = data?.main?.totaux || {};
+  const academicStats = data?.activite_recente || {};
+  const classAverages = data?.classAverages || [];
+  const gradeStats = data?.gradeStats || {};
+  const recentActivity = data?.recentActivity || [];
+  
+  console.log('Admin Dashboard Data:', data);
 
   return (
     <div className="space-y-6">
       {/* Statistiques générales */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Élèves"
-          value={stats.totalStudents || 0}
+          title="Total Élèves"
+          value={stats.eleves || 0}
           icon="👥"
           color="blue"
+          subtitle="Inscrits cette année"
         />
         <StatCard
           title="Enseignants"
-          value={stats.totalTeachers || 0}
+          value={stats.enseignants || 0}
           icon="👨‍🏫"
           color="green"
+          subtitle="Corps enseignant"
         />
         <StatCard
           title="Classes"
-          value={stats.totalClasses || 0}
+          value={stats.classes || 0}
           icon="🏫"
           color="purple"
+          subtitle="Tous niveaux"
         />
         <StatCard
           title="Matières"
-          value={stats.totalSubjects || 0}
+          value={stats.matieres || 0}
           icon="📚"
           color="orange"
+          subtitle="Enseignées"
         />
       </div>
 
-      {/* Graphiques et tableaux */}
+      {/* Statistiques académiques globales */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Performance Globale</h3>
+            <span className="text-3xl">📊</span>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Moyenne générale</span>
+              <span className="font-bold text-xl text-blue-600">
+                {academicStats.averageGeneral || 'N/A'}/20
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Taux de réussite</span>
+              <span className="font-bold text-green-600">
+                {academicStats.successRate || 0}%
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Élèves en difficulté</span>
+              <span className="font-bold text-red-600">
+                {academicStats.strugglingStudents || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Notes Saisies</h3>
+            <span className="text-3xl">✏️</span>
+          </div>
+          <div className="space-y-3">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Ce mois</span>
+              <span className="font-bold text-xl text-blue-600">
+                {gradeStats.thisMonth || 0}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Cette semaine</span>
+              <span className="font-bold text-green-600">
+                {gradeStats.thisWeek || 0}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Aujourd'hui</span>
+              <span className="font-bold text-purple-600">
+                {gradeStats.today || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">Activité Récente</h3>
+            <span className="text-3xl">🔄</span>
+          </div>
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Nouvelles inscriptions</span>
+              <span className="font-medium text-blue-600">
+                +{academicStats.newEnrollments || 0}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Bulletins générés</span>
+              <span className="font-medium text-green-600">
+                {academicStats.reportsGenerated || 0}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-gray-600">Alertes actives</span>
+              <span className="font-medium text-red-600">
+                {academicStats.activeAlerts || 0}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Moyennes par classe */}
+      <div className="bg-white rounded-lg shadow">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Moyennes Générales par Classe</h3>
+            <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
+              Voir détails
+            </button>
+          </div>
+        </div>
+        <div className="p-6">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Classe
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Niveau
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Élèves
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Moyenne
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Évolution
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {classAverages.length > 0 ? classAverages.map((classe, index) => (
+                  <tr key={index} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">{classe.nom}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-500">{classe.niveau}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-900">{classe.effectif || 0}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm font-bold ${
+                        classe.moyenne >= 12 ? 'text-green-600' : 
+                        classe.moyenne >= 10 ? 'text-yellow-600' : 'text-red-600'
+                      }`}>
+                        {classe.moyenne ? `${classe.moyenne}/20` : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className={`text-sm ${classe.evolution >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {classe.evolution ? `${classe.evolution > 0 ? '+' : ''}${classe.evolution}` : 'N/A'}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        classe.moyenne >= 12 ? 'bg-green-100 text-green-800' : 
+                        classe.moyenne >= 10 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {classe.moyenne >= 12 ? 'Excellent' : 
+                         classe.moyenne >= 10 ? 'Moyen' : 'À surveiller'}
+                      </span>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="6" className="px-6 py-4 text-center text-gray-500">
+                      Aucune donnée disponible pour le moment
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      {/* Graphiques de performance */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Inscriptions par mois</h3>
-          {/* Placeholder pour graphique */}
+          <h3 className="text-lg font-semibold mb-4">Évolution des Notes (6 derniers mois)</h3>
           <div className="h-64 bg-gray-100 rounded flex items-center justify-center">
-            Graphique des inscriptions
+            <div className="text-center">
+              <div className="text-4xl mb-2">📈</div>
+              <div className="text-gray-600">Graphique d'évolution des notes</div>
+              <div className="text-sm text-gray-500 mt-1">À intégrer avec Chart.js</div>
+            </div>
           </div>
         </div>
         
         <div className="bg-white rounded-lg shadow p-6">
-          <h3 className="text-lg font-semibold mb-4">Répartition par niveau</h3>
-          {/* Placeholder pour graphique */}
+          <h3 className="text-lg font-semibold mb-4">Répartition des Notes</h3>
           <div className="h-64 bg-gray-100 rounded flex items-center justify-center">
-            Graphique par niveau
+            <div className="text-center">
+              <div className="text-4xl mb-2">📊</div>
+              <div className="text-gray-600">Distribution des notes par tranche</div>
+              <div className="text-sm text-gray-500 mt-1">0-10, 10-14, 14-16, 16-20</div>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Actions rapides */}
+      {/* Actions rapides administrateur */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Actions rapides</h3>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <h3 className="text-lg font-semibold mb-4">Actions Administratives</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <QuickActionButton
             title="Nouvel élève"
-            icon="➕"
-            href="/eleves/nouveau"
+            icon="👤"
+            href="/admin/eleves/nouveau"
           />
           <QuickActionButton
             title="Nouvelle classe"
             icon="🏫"
-            href="/classes/nouvelle"
+            href="/admin/classes/nouvelle"
           />
           <QuickActionButton
-            title="Générer bulletins"
+            title="Ajouter enseignant"
+            icon="👨‍🏫"
+            href="/admin/enseignants/nouveau"
+          />
+          <QuickActionButton
+            title="Gérer matières"
+            icon="📚"
+            href="/admin/matieres"
+          />
+          <QuickActionButton
+            title="Bulletins"
             icon="📋"
-            href="/bulletins/generer"
+            href="/admin/bulletins"
           />
           <QuickActionButton
             title="Rapports"
             icon="📊"
-            href="/rapports"
+            href="/admin/rapports"
           />
         </div>
       </div>
+
+      {/* Alertes et notifications */}
+      {academicStats.activeAlerts > 0 && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <span className="text-yellow-400 text-xl">⚠️</span>
+            </div>
+            <div className="ml-3">
+              <p className="text-sm text-yellow-700">
+                <span className="font-medium">Attention :</span> {academicStats.activeAlerts} alerte(s) nécessite(nt) votre attention.
+              </p>
+              <div className="mt-2">
+                <button className="text-yellow-700 hover:text-yellow-600 text-sm font-medium underline">
+                  Voir les alertes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -418,7 +635,7 @@ function DefaultDashboard({ data }) {
 /**
  * Composant carte de statistique
  */
-function StatCard({ title, value, icon, color = 'blue' }) {
+function StatCard({ title, value, icon, color = 'blue', subtitle }) {
   const colorClasses = {
     blue: 'bg-blue-500',
     green: 'bg-green-500',
@@ -428,14 +645,17 @@ function StatCard({ title, value, icon, color = 'blue' }) {
   };
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
+    <div className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
       <div className="flex items-center">
         <div className={`${colorClasses[color]} rounded-lg p-3 text-white text-2xl`}>
           {icon}
         </div>
-        <div className="ml-4">
+        <div className="ml-4 flex-1">
           <p className="text-sm font-medium text-gray-600">{title}</p>
           <p className="text-2xl font-bold text-gray-900">{value}</p>
+          {subtitle && (
+            <p className="text-xs text-gray-500 mt-1">{subtitle}</p>
+          )}
         </div>
       </div>
     </div>

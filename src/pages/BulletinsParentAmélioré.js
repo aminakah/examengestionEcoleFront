@@ -75,7 +75,7 @@ useEffect(() => {
       console.log('Chargement des bulletins pour:', { selectedEnfant, selectedTrimestre });
       
       const response = await bulletinService.getBulletinsEnfants(selectedEnfant, selectedTrimestre);
-      console.log('Réponse bulletins:', response);
+      console.log('Réponse bulsdfvsdletins:', response);
 
       setBulletins(Array.isArray(response.data) ? response.data : [response.data].filter(Boolean));
     } catch (error) {
@@ -107,10 +107,14 @@ useEffect(() => {
 
   const enfantSelectionne = enfants.find(e => e.id == selectedEnfant);
   const trimestreSelectionne = trimestres.find(t => t.id == selectedTrimestre);
-  const bulletinActuel = bulletins.find(b => b.trimestre_id == selectedTrimestre || b.trimestre === selectedTrimestre);
-
+  const bulletinActuel = bulletins.find(b => b.
+periode_id
+ == selectedTrimestre || b.trimestre === selectedTrimestre);
+console.log(bulletins)
+console.log(bulletinActuel)
   // Calculs des statistiques avec vérifications de sécurité
-  const moyenneGenerale = bulletinActuel?.moyenne_generale || 0;
+  const moyenneGenerale = bulletinActuel?.
+moyenne_generale || 0;
   const evolutionMoyenne = bulletinActuel?.evolution || 0;
   const nombreMatieres = bulletinActuel?.notes?.length || 0;
   const matieresReussies = bulletinActuel?.notes?.filter(n => n?.moyenne >= 10).length || 0;
@@ -241,7 +245,7 @@ useEffect(() => {
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                 <StatsCard
                   title="Moyenne Générale"
-                  value={`${moyenneGenerale.toFixed(2)}/20`}
+                  value={`${moyenneGenerale}/20`}
                   icon={Award}
                   color={moyenneGenerale >= 10 ? 'green' : 'red'}
                   trend={evolutionMoyenne > 0 ? `+${evolutionMoyenne.toFixed(2)}` : evolutionMoyenne.toFixed(2)}
@@ -280,14 +284,22 @@ useEffect(() => {
                           Matière
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          1 Devoir
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          2 Devoir
+                        </th>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Composition
+                        </th>
+                        
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Moyenne
                         </th>
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Coefficient
                         </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Moyenne Classe
-                        </th>
+                       
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Appréciation
                         </th>
@@ -310,17 +322,24 @@ useEffect(() => {
                               </div>
                             </div>
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                            {note.note_devoir1 || '-'}/20
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                            {note.note_devoir2 || '-'}/20
+                          </td><td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                            {note.note_composition || '-'}/20
+                          </td>
+                          
                           <td className="px-6 py-4 whitespace-nowrap text-center">
                             <Badge variant={note.moyenne >= 10 ? 'success' : 'danger'}>
-                              {note.moyenne?.toFixed(2) || '-'}/20
+                              {note.moyenne || '-'}/20
                             </Badge>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
                             {note.coefficient}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                            {note.moyenne_classe?.toFixed(2) || '-'}/20
-                          </td>
+                          
                           <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
                             {note.appreciation || 'Aucune appréciation'}
                           </td>
