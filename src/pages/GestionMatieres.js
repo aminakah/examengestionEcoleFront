@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, Plus, Edit, Trash2, Clock, Users, Eye } from 'lucide-react';
+import { BookOpen, Plus, Edit, Trash2, Clock, Users, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import { apiService } from '../services/apiService';
 import PageLayout from '../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
@@ -7,9 +7,13 @@ import { getInitial } from '../utils/formatters';
 import Modal from '../components/Modal';
 import MatiereForm from '../components/MatiereForm';
 import MatiereDetailsModal from '../components/MatiereDetailsModal';
+import { schoolService, teacherService } from '../services';
 
 const GestionMatieres = () => {
+  const [niveaux, setNiveaux] = useState([]);
   const [matieres, setMatieres] = useState([]);
+  const [enseignants, setEnseignants] = useState([]);
+  const [anneesScolaires, setAnneesScolaires] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
@@ -17,15 +21,45 @@ const GestionMatieres = () => {
   const [selectedMatiere, setSelectedMatiere] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
+  // États pour les modals de feedback
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [matiereToDelete, setMatiereToDelete] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
   useEffect(() => {
     loadMatieres();
   }, []);
 
   const loadMatieres = async () => {
     try {
-      const response = await apiService.get('/matieres');
-      console.log(response.data);
-      setMatieres(response.data);
+      // Charger toutes les données en parallèle
+      const [
+        matieresResponse, 
+        niveauxResponse, 
+        enseignantsResponse, 
+        anneesScolairesResponse
+      ] = await Promise.all([
+        apiService.get('/matieres'),
+        schoolService.getNiveaux(),
+        teacherService.getTeachers(),
+        schoolService.getAnneesScolaires()
+      ]);
+
+      setMatieres(matieresResponse.data);
+      setNiveaux(niveauxResponse.data);
+      setEnseignants(enseignantsResponse.data);
+      setAnneesScolaires(anneesScolairesResponse.data);
+      
+      console.log('Données chargées:', {
+        matieres: matieresResponse.data.length,
+        niveaux: niveauxResponse.data.length,
+        enseignants: enseignantsResponse.data.length,
+        anneesScolaires: anneesScolairesResponse.data.length,
+        anneesScolairesData: anneesScolairesResponse.data
+      });
     } catch (error) {
       console.error('Erreur lors du chargement:', error);
     } finally {
@@ -37,18 +71,28 @@ const GestionMatieres = () => {
     try {
       if (editingMatiere) {
         const response = await apiService.put(`/matieres/${editingMatiere.id}`, formData);
-        setMatieres(matieres.map(matiere => 
-          matiere.id === editingMatiere.id ? response.data : matiere
-        ));
+        console.log(response)
+        if(response.success===true){
+          console.log("response")
+          loadMatieres()
+          closeModal();
+          setSuccessMessage('Matière modifiée avec succès!');
+          setShowSuccessModal(true);
+        }
       } else {
+        console.log(formData)
         const response = await apiService.post('/matieres', formData);
-        setMatieres([...matieres, response.data]);
+        if(response.success===true){
+          loadMatieres()
+          closeModal();
+          setSuccessMessage('Matière ajoutée avec succès!');
+          setShowSuccessModal(true);
+        }
       }
-      closeModal();
-      alert(editingMatiere ? 'Matière modifiée avec succès!' : 'Matière ajoutée avec succès!');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
-      alert('Erreur lors de la sauvegarde de la matière');
+      setErrorMessage(editingMatiere ? 'Erreur lors de la modification de la matière' : 'Erreur lors de l\'ajout de la matière');
+      setShowErrorModal(true);
       throw error; // Re-throw pour gérer le loading dans le form
     }
   };
@@ -78,17 +122,31 @@ const GestionMatieres = () => {
     setShowDetailsModal(false);
   };
 
-  const handleDelete = async (matiere) => {
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette matière ?')) {
-      try {
-        await apiService.delete(`/matieres/${matiere.id}`);
-        setMatieres(matieres.filter(m => m.id !== matiere.id));
-        alert('Matière supprimée avec succès!');
-      } catch (error) {
-        console.error('Erreur lors de la suppression:', error);
-        alert('Erreur lors de la suppression de la matière');
-      }
+  const handleDelete = (matiere) => {
+    setMatiereToDelete(matiere);
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDelete = async () => {
+    try {
+      await apiService.delete(`/matieres/${matiereToDelete.id}`);
+      setMatieres(matieres.filter(m => m.id !== matiereToDelete.id));
+      setShowDeleteConfirm(false);
+      setMatiereToDelete(null);
+      setSuccessMessage('Matière supprimée avec succès!');
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Erreur lors de la suppression:', error);
+      setShowDeleteConfirm(false);
+      setMatiereToDelete(null);
+      setErrorMessage('Erreur lors de la suppression de la matière');
+      setShowErrorModal(true);
     }
+  };
+
+  const cancelDelete = () => {
+    setShowDeleteConfirm(false);
+    setMatiereToDelete(null);
   };
 
 
@@ -180,9 +238,11 @@ const GestionMatieres = () => {
 
   // Statistiques
   const totalMatieres = matieres.length;
-  const coefficientMoyen = totalMatieres > 0 
-    ? Math.round((matieres.reduce((sum, m) => sum + m.coefficient, 0) / totalMatieres) * 10) / 10 
-    : 0;
+const coefficientMoyen = totalMatieres > 0 
+  ? Math.round(
+      (matieres.reduce((sum, m) => sum + (Number(m.coefficient) || 0), 0) / totalMatieres) * 10
+    ) / 10 
+  : 0;
 
   if (loading) {
     return (
@@ -230,11 +290,14 @@ const GestionMatieres = () => {
         isOpen={showModal}
         onClose={closeModal}
         title={editingMatiere ? 'Modifier la matière' : 'Ajouter une nouvelle matière'}
-        size="lg"
+        size="xl"
       >
         <MatiereForm
           onSubmit={handleSubmit}
           onCancel={closeModal}
+          niveaux={niveaux}
+          enseignants={enseignants}
+          anneesScolaires={anneesScolaires}
           initialData={editingMatiere}
           isEditing={!!editingMatiere}
         />
@@ -246,6 +309,95 @@ const GestionMatieres = () => {
         onClose={closeDetailsModal}
         matiere={selectedMatiere}
       />
+
+      {/* Modal de confirmation de suppression */}
+      <Modal
+        isOpen={showDeleteConfirm}
+        onClose={cancelDelete}
+        title="Confirmer la suppression"
+        size="md"
+      >
+        <div className="text-center py-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <AlertTriangle className="h-6 w-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Supprimer la matière
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            Êtes-vous sûr de vouloir supprimer la matière{' '}
+            <span className="font-medium text-gray-900">
+              {matiereToDelete?.nom}
+            </span> ? Cette action est irréversible.
+          </p>
+          <div className="flex space-x-3 justify-center">
+            <button
+              onClick={cancelDelete}
+              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={confirmDelete}
+              className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Supprimer
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal de succès */}
+      <Modal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        title="Opération réussie"
+        size="md"
+      >
+        <div className="text-center py-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100 mb-4">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Succès
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            {successMessage}
+          </p>
+          <button
+            onClick={() => setShowSuccessModal(false)}
+            className="px-4 py-2 text-sm font-medium text-white bg-green-600 border border-transparent rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            OK
+          </button>
+        </div>
+      </Modal>
+
+      {/* Modal d'erreur */}
+      <Modal
+        isOpen={showErrorModal}
+        onClose={() => setShowErrorModal(false)}
+        title="Erreur"
+        size="md"
+      >
+        <div className="text-center py-4">
+          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4">
+            <XCircle className="h-6 w-6 text-red-600" />
+          </div>
+          <h3 className="text-lg font-medium text-gray-900 mb-2">
+            Erreur
+          </h3>
+          <p className="text-sm text-gray-500 mb-6">
+            {errorMessage}
+          </p>
+          <button
+            onClick={() => setShowErrorModal(false)}
+            className="px-4 py-2 text-sm font-medium text-white bg-red-600 border border-transparent rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+          >
+            OK
+          </button>
+        </div>
+      </Modal>
 
       {/* Liste des matières */}
       <Card title="Liste des matières">

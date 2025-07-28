@@ -178,7 +178,7 @@ function AdminDashboard({ data }) {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Activité Récente</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Actiqwsdsdcvvité Récente</h3>
             <span className="text-3xl">🔄</span>
           </div>
           <div className="space-y-2">
@@ -240,7 +240,7 @@ function AdminDashboard({ data }) {
           </div>
         </div>
         <div className="p-6">
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto max-h-100 overflow-y-auto" >
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
@@ -264,7 +264,7 @@ function AdminDashboard({ data }) {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white  divide-y divide-gray-200">
                 {classesData.length > 0 ? classesData.map((classe, index) => (
                   <tr key={index} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -376,7 +376,7 @@ function AdminDashboard({ data }) {
       </div>
 
       {/* Actions rapides administrateur */}
-      <div className="bg-white rounded-lg shadow p-6">
+      {/* <div className="bg-white rounded-lg shadow p-6">
         <h3 className="text-lg font-semibold mb-4">Actions Asdcvdministratives</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           <QuickActionButton
@@ -410,7 +410,7 @@ function AdminDashboard({ data }) {
             href="/admin/rapports"
           />
         </div>
-      </div>
+      </div> */}
 
       {/* Alertes basées sur les données */}
       {classesData.filter(c => c.taux < 60).length > 0 && (

@@ -20,18 +20,18 @@ const EleveForm = ({
   isEditing = false 
 }) => {
   const [formData, setFormData] = useState({
-    nom: initialData?.nom || '',
-    prenom: initialData?.prenom || '',
-    email: initialData?.email || '',
-    classe_id: initialData?.classe_id || '',
-    date_naissance: initialData?.date_naissance || '',
-    adresse: initialData?.adresse || '',
-    telephone_parent: initialData?.telephone_parent || '',
-    parent_nom: initialData?.parent_nom || '',
-    parent_prenom: initialData?.parent_prenom || '',
-    parent_email: initialData?.parent_email || ''
+    nom: initialData?.user.nom || '',
+    prenom: initialData?.user.name || '',
+    email: initialData?.user.email || '',
+    classe_id: initialData?.inscriptions[0]?.classe_id || '',
+    date_naissance: initialData?.user.date_naissance || '',
+    adresse: initialData?.user.adresse || '',
+    telephone_parent: initialData?.parents[0].user.telephone|| '',
+    parent_nom: initialData?.parents[0].user.nom || '',
+    parent_prenom: initialData?.parents[0].user.name || '',
+    parent_email: initialData?.parents[0].user.email || ''
   });
-
+console.log(initialData)
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
 

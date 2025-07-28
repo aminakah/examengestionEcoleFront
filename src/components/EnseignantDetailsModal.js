@@ -109,7 +109,7 @@ const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Profil de ${enseignant.prenom} ${enseignant.nom}`}
+      title={`Profil de ${enseignant.user.name} ${enseignant.user.nom}`}
       size="lg"
     >
       <div className="space-y-6">
@@ -122,20 +122,20 @@ const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
             <InfoField
               icon={User}
               label="Nom complet"
-              value={`${enseignant.prenom} ${enseignant.nom}`}
+              value={`${enseignant.user.name} ${enseignant.user.nom}`}
             />
             
             <InfoField
               icon={Mail}
               label="Adresse e-mail"
-              value={enseignant.email}
+              value={enseignant.user.email}
               isEmail={true}
             />
             
             <InfoField
               icon={Phone}
               label="Téléphone"
-              value={enseignant.telephone}
+              value={enseignant.user.telephone}
               isPhone={true}
             />
             
@@ -143,12 +143,12 @@ const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
               <InfoField
                 icon={MapPin}
                 label="Adresse"
-                value={enseignant.adresse}
+                value={enseignant.user.adresse}
               />
             )}
 
             {/* Message si aucune info de contact */}
-            {!enseignant.telephone && !enseignant.adresse && (
+            {!enseignant.user.telephone && !enseignant.user.adresse && (
               <div className="text-center py-4 text-gray-500">
                 <Info className="w-6 h-6 mx-auto mb-2 opacity-50" />
                 <p className="text-sm">Informations de contact limitées</p>
@@ -172,15 +172,15 @@ const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
               />
             )}
             
-            {enseignant.date_embauche && (
+            {enseignant.created_at && (
               <InfoField
                 icon={Calendar}
                 label="Date d'embauche"
                 value={(
                   <div>
-                    <div>{formatDate(enseignant.date_embauche)}</div>
+                    <div>{formatDate(enseignant.created_at)}</div>
                     <div className="text-sm text-gray-600 mt-1">
-                      Expérience : {calculateExperience(enseignant.date_embauche)}
+                      Expérience : {calculateExperience(enseignant.created_at)}
                     </div>
                   </div>
                 )}
@@ -197,28 +197,39 @@ const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
           </InfoCard>
         </div>
 
-        {/* Statistiques rapides */}
-        {enseignant.date_embauche && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
-              <Calendar className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Ancienneté</p>
-              <p className="font-bold text-gray-900">{calculateExperience(enseignant.date_embauche)}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
-              <BookOpen className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Matière</p>
-              <p className="font-bold text-gray-900">{enseignant.matiere_nom || 'Non définie'}</p>
-            </div>
-            
-            <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
-              <GraduationCap className="w-6 h-6 text-blue-500 mx-auto mb-2" />
-              <p className="text-sm text-gray-600">Statut</p>
-              <p className="font-bold text-blue-600">Actif</p>
-            </div>
-          </div>
+        
+   {enseignant.created_at && (
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
+      <Calendar className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+      <p className="text-sm text-gray-600">Ancienneté</p>
+      <p className="font-bold text-gray-900">{calculateExperience(enseignant.created_at)}</p>
+    </div>
+
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
+      <BookOpen className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+      <p className="text-sm text-gray-600">Matières</p>
+      <div className="font-bold text-gray-900 space-y-1">
+        {enseignant.matieres && enseignant.matieres.length > 0 ? (
+          enseignant.matieres.map((matiere, index) => (
+            <p key={index}>{matiere.code
+}</p>
+          ))
+        ) : (
+          <p>Non définies</p>
         )}
+      </div>
+    </div>
+
+    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 text-center">
+      <GraduationCap className="w-6 h-6 text-blue-500 mx-auto mb-2" />
+      <p className="text-sm text-gray-600">Statut</p>
+      <p className="font-bold text-blue-600">Actif</p>
+    </div>
+  </div>
+)}
+
+
 
         {/* Informations système */}
         <div className="bg-gray-50 rounded-xl p-4 border border-gray-200">

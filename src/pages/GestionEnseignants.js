@@ -113,31 +113,31 @@ const GestionEnseignants = () => {
       render: (value, row) => (
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-medium">
-            {getInitials(row.prenom, value)}
+            {getInitials(row.user.name, value)}
           </div>
           <div>
-            <div className="font-medium text-gray-900">{formatFullName(row.prenom, value)}</div>
+            <div className="font-medium text-gray-900">{formatFullName(row.user.name, value)}</div>
             <div className="text-sm text-gray-500 flex items-center space-x-1">
               <Mail className="w-3 h-3" />
-              <span>{formatEmail(row.email)}</span>
+              <span>{formatEmail(row.user.email)}</span>
             </div>
           </div>
         </div>
       )
     },
-   {
-  key: 'matiere_nom',
-  label: 'Matières',
-  render: (value, row) => (
-    <div className="flex flex-wrap gap-1">
-      {row.matieres.map((matiere, index) => (
-        <Badge key={index} variant="info">
-          {matiere.code}
-        </Badge>
-      ))}
-    </div>
-  )
-},
+//    {
+//   key: 'matiere_nom',
+//   label: 'Matières',
+//   render: (value, row) => (
+//     <div className="flex flex-wrap gap-2 ">
+//       {row.matieres.map((matiere, index) => (
+//         <Badge key={index} variant="info">
+//           {matiere.code}
+//         </Badge>
+//       ))}
+//     </div>
+//   )
+// },
     {
       key: 'specialite',
       label: 'Spécialité',

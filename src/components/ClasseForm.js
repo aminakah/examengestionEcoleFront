@@ -152,7 +152,7 @@ const ClasseForm = ({
             
             <InputField
               icon={Award}
-              label="Niveau scolaire"
+              label="Niveausdv scolaire"
               name="niveau"
               type="select"
               required

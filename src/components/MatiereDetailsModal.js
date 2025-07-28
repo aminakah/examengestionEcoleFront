@@ -18,6 +18,7 @@ import Modal from './Modal';
 
 const MatiereDetailsModal = ({ isOpen, onClose, matiere }) => {
   if (!matiere) return null;
+console.log(matiere)
 
   const InfoCard = ({ icon: Icon, title, children, color = "blue" }) => {
     const colorClasses = {
@@ -95,29 +96,7 @@ const MatiereDetailsModal = ({ isOpen, onClose, matiere }) => {
       size="lg"
     >
       <div className="space-y-6">
-        {/* En-tête avec informations principales */}
-        <div className="text-center bg-gradient-to-r from-blue-500 to-indigo-600 rounded-2xl p-8 text-white">
-          <div 
-            className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg"
-            style={{ backgroundColor: matiere.couleur || '#3B82F6' }}
-          >
-            <span className="text-2xl font-bold">
-              {matiere.code ? matiere.code.substring(0, 2).toUpperCase() : matiere.nom?.charAt(0) || 'M'}
-            </span>
-          </div>
-          <h2 className="text-2xl font-bold mb-2">{matiere.nom}</h2>
-          <p className="text-blue-100 font-medium">
-            {matiere.code && (
-              <span className="inline-flex items-center space-x-1">
-                <Code className="w-4 h-4" />
-                <span>{matiere.code} • Coefficient {matiere.coefficient}</span>
-              </span>
-            )}
-          </p>
-          <p className="text-blue-200 text-sm mt-1">
-            {getColorName(matiere.couleur)}
-          </p>
-        </div>
+       
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Informations de base */}
