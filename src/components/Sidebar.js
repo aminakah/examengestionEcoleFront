@@ -12,10 +12,11 @@ import {
   Award,
   Upload,
   User,
-  LogOut
+  LogOut,
+  Shield
 } from 'lucide-react';
 
-const Sidebar = () => {
+const Sidebar = ({ isOpen, onClose, isMobile }) => {
   const { user, logout } = useAuth();
   const location = useLocation();
 
@@ -40,9 +41,9 @@ const Sidebar = () => {
         { path: '/admin/emploi-du-temps', label: 'Emploi du Temps', icon: Calendar, roles: ['administrateur'] },
         { path: '/admin/documents', label: 'Gestion des documents', icon: Upload, roles: ['administrateur'] },
         { path: '/admin/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['administrateur', 'enseignant'] },
-        { path: '/admin/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] }
-
-
+        { path: '/admin/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] },
+        // Nouvel item pour la démo de sécurité - Amélioration pour l'audit
+        { path: '/admin/security-demo', label: 'Améliorations Sécurité', icon: Shield, roles: ['administrateur'] }
       );
     }
 
@@ -67,23 +68,44 @@ const Sidebar = () => {
   const menuItems = getMenuItems();
 
   return (
-    <div className="fixed left-0 top-0 h-screen w-64 bg-white shadow-xl border-r border-gray-200 z-50 flex flex-col">
+    <div className={`
+      fixed left-0 top-0 h-screen w-64 bg-white shadow-xl border-r border-gray-200 z-50 flex flex-col
+      transition-transform duration-300 ease-in-out
+      ${isMobile 
+        ? (isOpen ? 'translate-x-0' : '-translate-x-full')
+        : (isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0')
+      }
+    `}>
       {/* Header */}
       <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-blue-700 flex-shrink-0">
-        <div className="flex items-center">
-          <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3 shadow-md">
-            <School className="w-6 h-6 text-blue-600" />
+        <div className="flex items-center justify-between">
+          <div className="flex items-center">
+            <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center mr-3 shadow-md">
+              <School className="w-6 h-6 text-blue-600" />
+            </div>
+            <div>
+              <h2 className="text-white font-bold text-lg">École Moderne</h2>
+              <p className="text-blue-100 text-sm">Portail Scolaire</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-white font-bold text-lg">École Moderne</h2>
-            <p className="text-blue-100 text-sm">Portail Scolaire</p>
-          </div>
+          
+          {/* Bouton fermer pour mobile */}
+          {isMobile && (
+            <button
+              onClick={onClose}
+              className="lg:hidden text-white hover:text-blue-200 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
 
       {/* Navigation Menu - Prend tout l'espace disponible */}
       <nav className="flex-1 py-4 overflow-y-auto">
-        <div className="space-y-1 px-3">
+        <div className="space-y-1 px-2">
           {menuItems.map(item => {
             const isActive = location.pathname === item.path;
             const Icon = item.icon;
@@ -92,6 +114,7 @@ const Sidebar = () => {
               <NavLink
                 key={item.path}
                 to={item.path}
+                onClick={() => isMobile && onClose()} // Fermer le sidebar sur mobile
                 className={({ isActive }) => `
                   w-full flex items-center px-3 py-3 text-left rounded-lg transition-all duration-200 group
                   ${isActive

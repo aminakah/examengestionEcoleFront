@@ -26,6 +26,9 @@ import BulletinsAdmin from './pages/BulletinsAdmin';
 import BulletinsParentAmélioré from './pages/BulletinsParentAmélioré';
 import GestionDocuments from './pages/GestionDocuments';
 
+// Nouveaux composants d'amélioration de sécurité - Amélioration pour l'audit
+import SecurityImprovementsDemo from './components/SecurityImprovementsDemo';
+
 // Services et hooks
 import { configureServices, setupAPIInterceptors } from './services';
 import { usePermission } from './components/common/RouteProtection';
@@ -108,6 +111,8 @@ const AuthenticatedApp = () => {
                 <Route path="emploi-du-temps" element={<GestionEmploiDuTemps />} />
                 <Route path="documents" element={<GestionDocuments />} />
                 <Route path="bulletins" element={<BulletinsAdmin />} />
+                {/* Route de démo des améliorations de sécurité - Amélioration pour l'audit */}
+                <Route path="security-demo" element={<SecurityImprovementsDemo />} />
               </Routes>
             </RoleProtectedRoute>
           } 

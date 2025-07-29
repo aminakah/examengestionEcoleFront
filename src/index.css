@@ -2,6 +2,9 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Import des styles des améliorations de sécurité - Amélioration pour l'audit */
+@import './styles/securityImprovements.css';
+
 /* Variables CSS personnalisées */
 :root {
   --color-primary: #3b82f6;

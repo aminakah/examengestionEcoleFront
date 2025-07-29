@@ -11,30 +11,35 @@ class ApiService {
     // Debug: afficher le token
   }
 
-  // Configuration des headers par défaut
-  getHeaders() {
+  // Configuration des headers par défaut - Correction pour l'audit
+  getHeaders(skipAuth = false) {
     const headers = {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     };
 
-    if (this.token) {
+    // Ne pas inclure le token pour les routes de connexion/inscription
+    if (!skipAuth && this.token) {
       headers.Authorization = `Bearer ${this.token}`;
     }
 
     return headers;
   }
 
-  // Méthode générique pour les requêtes HTTP
+  // Méthode générique pour les requêtes HTTP - Correction pour l'audit
   async request(method, endpoint, data = null, options = {}) {
-    // Vérifier si on a un token pour les routes protégées
-    if (!this.token && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/register')) {
+    // Identifier les routes publiques qui n'ont pas besoin d'authentification
+    const publicRoutes = ['/auth/login', '/auth/register', '/auth/forgot-password'];
+    const isPublicRoute = publicRoutes.some(route => endpoint.includes(route));
+    
+    // Pour les routes publiques, ne pas vérifier le token
+    if (!isPublicRoute && !this.token) {
       throw new Error('Aucun token d\'authentification. Veuillez vous connecter.');
     }
 
     const config = {
       method,
-      headers: { ...this.getHeaders(), ...options.headers },
+      headers: { ...this.getHeaders(isPublicRoute), ...options.headers },
     };
 
     if (data && method !== 'GET') {
@@ -54,20 +59,43 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         
+        // Créer une erreur personnalisée qui préserve les informations HTTP
+        const customError = new Error(errorData.message || `HTTP Error: ${response.status}`);
+        customError.status = response.status;
+        customError.response = { status: response.status, data: errorData };
+        customError.request = response;
+        
         // Gestion spécifique des erreurs d'authentification
         if (response.status === 401) {
-          this.setToken(null); // Supprimer le token invalide
-          throw new Error('Session expirée. Veuillez vous reconnecter.');
+          // Pour les routes publiques, ne pas supprimer le token automatiquement
+          if (!isPublicRoute) {
+            this.setToken(null); // Supprimer le token invalide
+            customError.message = 'Session expirée. Veuillez vous reconnecter.';
+          } else {
+            // Pour la connexion, renvoyer l'erreur spécifique
+            customError.message = errorData.message || 'Identifiants incorrects.';
+          }
         }
         
-        throw new Error(errorData.message || `HTTP Error: ${response.status}`);
+        throw customError;
       }
 
       const result = await response.json();
       return result;
     } catch (error) {
       console.error(`❌ API Error - ${method} ${endpoint}:`, error);
-      throw error;
+      
+      // Si c'est déjà notre erreur personnalisée, la relancer telle quelle
+      if (error.response || error.status) {
+        throw error;
+      }
+      
+      // Sinon, créer une erreur personnalisée pour les erreurs réseau
+      const networkError = new Error(error.message || 'Erreur de connexion réseau');
+      networkError.request = true; // Marquer comme erreur réseau
+      networkError.original = error;
+      
+      throw networkError;
     }
   }
 

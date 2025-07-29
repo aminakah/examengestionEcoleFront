@@ -178,7 +178,7 @@ function AdminDashboard({ data }) {
 
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Actiqwsdsdcvvité Récente</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Activités Récente</h3>
             <span className="text-3xl">🔄</span>
           </div>
           <div className="space-y-2">
@@ -240,7 +240,7 @@ function AdminDashboard({ data }) {
           </div>
         </div>
         <div className="p-6">
-          <div className="overflow-x-auto max-h-100 overflow-y-auto" >
+          <div className="space-y-3 max-h-80 overflow-y-auto" >
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>

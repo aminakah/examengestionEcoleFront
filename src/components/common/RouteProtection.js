@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import LoadingSpinner from '../LoadingSpinner';
@@ -132,16 +132,28 @@ export const PermissionProtectedRoute = ({
  * Composant pour rediriger les utilisateurs déjà connectés
  */
 export const GuestRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+  const { isAuthenticated, loading, user } = useAuth();
+
+  // Debug: Surveiller les changements d'état
+  React.useEffect(() => {
+    console.log('🚪 [GuestRoute] État:', {
+      isAuthenticated,
+      loading,
+      user: user?.email || 'Non connecté'
+    });
+  }, [isAuthenticated, loading, user]);
 
   if (loading) {
+    console.log('⏳ [GuestRoute] Affichage du loading...');
     return <LoadingSpinner />;
   }
 
   if (isAuthenticated) {
+    console.log('🔄 [GuestRoute] Utilisateur connecté - Redirection vers dashboard');
     return <Navigate to="/dashboard" replace />;
   }
 
+  console.log('✅ [GuestRoute] Affichage de la page de connexion');
   return children;
 };
 

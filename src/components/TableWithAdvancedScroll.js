@@ -79,7 +79,7 @@ export const TableWithAdvancedScroll = ({
   return (
     <div className={`bg-white rounded-lg border border-gray-200 shadow-sm ${className}`}>
       {/* En-tête avec informations */}
-      <div className="px-6 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+      <div className="px-2 py-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
             {showPagination ? (
@@ -110,7 +110,7 @@ export const TableWithAdvancedScroll = ({
               {columns.map((column, index) => (
                 <th
                   key={index}
-                  className={`px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                  className={`px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
                     stickyHeader ? 'backdrop-blur-sm bg-gray-50/90' : ''
                   }`}
                   style={{ minWidth: column.minWidth || 'auto' }}

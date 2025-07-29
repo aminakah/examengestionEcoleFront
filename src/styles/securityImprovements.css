@@ -1,0 +1,171 @@
+/* Styles pour les améliorations de sécurité - Amélioration pour l'audit */
+
+/* Animation pour les notifications de session */
+@keyframes slide-in-right {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slide-out-right {
+  from {
+    transform: translateX(0);
+    opacity: 1;
+  }
+  to {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+}
+
+.animate-slide-in-right {
+  animation: slide-in-right 0.3s ease-out forwards;
+}
+
+.animate-slide-out-right {
+  animation: slide-out-right 0.3s ease-in forwards;
+}
+
+/* Animation pour l'indicateur de force du mot de passe */
+@keyframes strength-fill {
+  from {
+    width: 0%;
+  }
+}
+
+.strength-bar {
+  animation: strength-fill 0.5s ease-out;
+}
+
+/* Pulsation pour les avertissements */
+@keyframes pulse-warning {
+  0% {
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0.7);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgba(251, 146, 60, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(251, 146, 60, 0);
+  }
+}
+
+.pulse-warning {
+  animation: pulse-warning 2s infinite;
+}
+
+/* Effets de transition pour les champs de validation */
+.password-field-container {
+  transition: all 0.3s ease;
+}
+
+.password-field-container.focused {
+  background-color: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  padding: 8px;
+}
+
+/* Animations pour les indicateurs de force */
+.strength-very-weak {
+  background: linear-gradient(90deg, #ef4444 0%, #f87171 100%);
+}
+
+.strength-weak {
+  background: linear-gradient(90deg, #f97316 0%, #fb923c 100%);
+}
+
+.strength-medium {
+  background: linear-gradient(90deg, #eab308 0%, #fbbf24 100%);
+}
+
+.strength-strong {
+  background: linear-gradient(90deg, #22c55e 0%, #4ade80 100%);
+}
+
+.strength-very-strong {
+  background: linear-gradient(90deg, #059669 0%, #10b981 100%);
+}
+
+/* Tooltip pour les recommandations */
+.password-tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+  z-index: 10;
+  margin-top: 4px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.password-tooltip.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Styles pour les notifications de session */
+.session-notification {
+  backdrop-filter: blur(4px);
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.session-modal-overlay {
+  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.4);
+}
+
+/* Animation pour le compteur de session */
+@keyframes countdown-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.countdown-urgent {
+  animation: countdown-pulse 1s infinite;
+  color: #dc2626 !important;
+}
+
+/* Styles responsifs */
+@media (max-width: 768px) {
+  .password-field-container {
+    padding: 4px;
+  }
+  
+  .session-notification {
+    margin: 8px;
+    max-width: calc(100vw - 16px);
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  .password-tooltip {
+    background: #374151;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+  
+  .session-notification {
+    background: rgba(55, 65, 81, 0.95);
+    color: #f9fafb;
+  }
+}

@@ -277,62 +277,215 @@ export const validateDate = (date, options = {}) => {
 };
 
 /**
- * Validation des mots de passe
+ * Validation renforcée des mots de passe - Amélioration pour l'audit
  */
 export const validatePassword = (password, options = {}) => {
   const {
     minLength = 8,
+    maxLength = 64,
     requireUppercase = true,
     requireLowercase = true,
     requireNumbers = true,
-    requireSpecialChars = false
+    requireSpecialChars = true,
+    preventCommonPatterns = true,
+    preventPersonalInfo = false,
+    personalInfo = []
   } = options;
 
   const errors = [];
+  const warnings = [];
 
-  if (password.length < minLength) {
-    errors.push(`Minimum ${minLength} caractères`);
+  // Validation de base
+  if (!password || password.length === 0) {
+    errors.push('Mot de passe requis');
+    return { isValid: false, errors, warnings, strength: 'invalide' };
   }
 
+  if (password.length < minLength) {
+    errors.push(`Minimum ${minLength} caractères requis`);
+  }
+
+  if (password.length > maxLength) {
+    errors.push(`Maximum ${maxLength} caractères autorisés`);
+  }
+
+  // Validation des caractères
   if (requireUppercase && !/[A-Z]/.test(password)) {
-    errors.push('Au moins une majuscule');
+    errors.push('Au moins une lettre majuscule requise');
   }
 
   if (requireLowercase && !/[a-z]/.test(password)) {
-    errors.push('Au moins une minuscule');
+    errors.push('Au moins une lettre minuscule requise');
   }
 
   if (requireNumbers && !/\d/.test(password)) {
-    errors.push('Au moins un chiffre');
+    errors.push('Au moins un chiffre requis');
   }
 
-  if (requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
-    errors.push('Au moins un caractère spécial');
+  if (requireSpecialChars && !/[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\\/]/.test(password)) {
+    errors.push('Au moins un caractère spécial requis (!@#$%^&*...)');
   }
+
+  // Validation des motifs interdits
+  if (preventCommonPatterns) {
+    const commonPatterns = [
+      /(.)\1{2,}/,              // 3+ caractères identiques consécutifs
+      /123456|654321/,          // Séquences numériques
+      /abcdef|fedcba/,          // Séquences alphabétiques
+      /azerty|qwerty/i,         // Motifs clavier courants
+      /password|motdepasse/i,   // Mots "password"
+      /admin|root|user/i,       // Mots administratifs
+      /\d{4,}/,                 // Plus de 3 chiffres consécutifs
+    ];
+
+    commonPatterns.forEach((pattern, index) => {
+      if (pattern.test(password)) {
+        const patternNames = [
+          'caractères répétitifs',
+          'séquence numérique',
+          'séquence alphabétique',
+          'motif clavier',
+          'mot "password"',
+          'terme administratif',
+          'trop de chiffres consécutifs'
+        ];
+        warnings.push(`Évitez les ${patternNames[index]}`);
+      }
+    });
+  }
+
+  // Validation des informations personnelles
+  if (preventPersonalInfo && personalInfo.length > 0) {
+    personalInfo.forEach(info => {
+      if (info && password.toLowerCase().includes(info.toLowerCase())) {
+        warnings.push('Évitez d\'utiliser des informations personnelles');
+      }
+    });
+  }
+
+  // Validation des caractères non printables
+  if (/[\x00-\x1f\x7f-\x9f]/.test(password)) {
+    errors.push('Caractères de contrôle non autorisés');
+  }
+
+  // Calcul de la force améliorée
+  const strength = calculateAdvancedPasswordStrength(password);
 
   return {
     isValid: errors.length === 0,
     errors,
-    strength: calculatePasswordStrength(password)
+    warnings,
+    strength,
+    score: strength.score,
+    recommendations: generatePasswordRecommendations(password, errors, warnings)
   };
 };
 
 /**
- * Calcul de la force d'un mot de passe
+ * Calcul avancé de la force d'un mot de passe - Amélioration pour l'audit
  */
-const calculatePasswordStrength = (password) => {
+const calculateAdvancedPasswordStrength = (password) => {
   let score = 0;
+  let feedback = [];
   
-  if (password.length >= 8) score += 1;
-  if (password.length >= 12) score += 1;
-  if (/[a-z]/.test(password)) score += 1;
-  if (/[A-Z]/.test(password)) score += 1;
-  if (/\d/.test(password)) score += 1;
-  if (/[!@#$%^&*(),.?":{}|<>]/.test(password)) score += 1;
+  // Longueur (0-25 points)
+  if (password.length >= 8) score += 5;
+  if (password.length >= 12) score += 10;
+  if (password.length >= 16) score += 10;
   
-  if (score <= 2) return 'faible';
-  if (score <= 4) return 'moyen';
-  return 'fort';
+  // Variété des caractères (0-40 points)
+  if (/[a-z]/.test(password)) { score += 5; feedback.push('minuscules'); }
+  if (/[A-Z]/.test(password)) { score += 5; feedback.push('majuscules'); }
+  if (/\d/.test(password)) { score += 10; feedback.push('chiffres'); }
+  if (/[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\\/]/.test(password)) { 
+    score += 15; 
+    feedback.push('caractères spéciaux'); 
+  }
+  if (/[À-ÿ]/.test(password)) { score += 5; feedback.push('caractères accentués'); }
+  
+  // Complexité (0-20 points)
+  const uniqueChars = new Set(password.split('')).size;
+  if (uniqueChars >= password.length * 0.6) score += 10; // Faible répétition
+  if (!/(.)\1{2,}/.test(password)) score += 5; // Pas de répétition
+  if (!/012|123|234|345|456|567|678|789|890/.test(password)) score += 5; // Pas de séquence
+  
+  // Imprévisibilité (0-15 points)
+  if (!/password|123456|qwerty|azerty|admin/i.test(password)) score += 10;
+  if (password.length > 0 && !/^[a-zA-Z]+$/.test(password)) score += 5; // Pas que des lettres
+  
+  // Détermination du niveau
+  let level, color, description;
+  if (score < 30) {
+    level = 'très faible';
+    color = '#ef4444';
+    description = 'Mot de passe très vulnérable';
+  } else if (score < 50) {
+    level = 'faible';
+    color = '#f97316';
+    description = 'Mot de passe facilement cassable';
+  } else if (score < 70) {
+    level = 'moyen';
+    color = '#eab308';
+    description = 'Mot de passe acceptable';
+  } else if (score < 85) {
+    level = 'fort';
+    color = '#22c55e';
+    description = 'Bon mot de passe';
+  } else {
+    level = 'très fort';
+    color = '#059669';
+    description = 'Excellent mot de passe';
+  }
+  
+  return {
+    score,
+    level,
+    color,
+    description,
+    feedback,
+    percentage: Math.min(Math.round((score / 100) * 100), 100)
+  };
+};
+
+/**
+ * Génération de recommandations pour améliorer le mot de passe
+ */
+const generatePasswordRecommendations = (password, errors, warnings) => {
+  const recommendations = [];
+  
+  if (password.length < 12) {
+    recommendations.push('Utilisez au moins 12 caractères pour plus de sécurité');
+  }
+  
+  if (!/[A-Z]/.test(password)) {
+    recommendations.push('Ajoutez des lettres majuscules');
+  }
+  
+  if (!/[a-z]/.test(password)) {
+    recommendations.push('Ajoutez des lettres minuscules');
+  }
+  
+  if (!/\d/.test(password)) {
+    recommendations.push('Ajoutez des chiffres');
+  }
+  
+  if (!/[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\\/]/.test(password)) {
+    recommendations.push('Ajoutez des caractères spéciaux (!@#$%...)');
+  }
+  
+  if (/(.)\1{2,}/.test(password)) {
+    recommendations.push('Évitez les caractères répétitifs (aaa, 111...)');
+  }
+  
+  if (/123|abc|qwe/i.test(password)) {
+    recommendations.push('Évitez les suites logiques (123, abc, qwerty...)');
+  }
+  
+  if (password.length > 0 && new Set(password.split('')).size < password.length * 0.6) {
+    recommendations.push('Utilisez plus de caractères différents');
+  }
+  
+  return recommendations;
 };
 
 /**
