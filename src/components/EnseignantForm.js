@@ -12,6 +12,111 @@ import {
   X
 } from 'lucide-react';
 
+// ✅ CORRECTION: Déplacer InputField EN DEHORS du composant principal
+const InputField = ({ 
+  icon: Icon, 
+  label, 
+  name, 
+  type = "text", 
+  required = false, 
+  placeholder = "", 
+  options = null,
+  rows = null,
+  value,
+  onChange,
+  onFocus,
+  onBlur,
+  isFocused
+}) => {
+  const hasValue = value !== '' && value !== 0;
+  
+  return (
+    <div className="group">
+      <label className={`block text-sm font-medium mb-2 transition-colors duration-200 ${
+        isFocused ? 'text-blue-600' : 'text-gray-700'
+      }`}>
+        <div className="flex items-center space-x-2">
+          <Icon className={`w-4 h-4 transition-colors duration-200 ${
+            isFocused ? 'text-blue-500' : hasValue ? 'text-blue-400' : 'text-gray-400'
+          }`} />
+          <span>{label} {required && <span className="text-red-500">*</span>}</span>
+        </div>
+      </label>
+      
+      <div className="relative">
+        {type === 'select' ? (
+          <select
+            name={name}
+            value={value}
+            onChange={onChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            required={required}
+            className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white
+              ${isFocused 
+                ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
+                : hasValue 
+                  ? 'border-blue-300 shadow-md hover:border-blue-400' 
+                  : 'border-gray-200 hover:border-gray-300 shadow-sm'
+              }
+              focus:outline-none text-gray-900`}
+          >
+            <option value="">{placeholder}</option>
+            {options && options.map(option => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        ) : type === 'textarea' ? (
+          <textarea
+            name={name}
+            value={value}
+            onChange={onChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            required={required}
+            rows={rows || 3}
+            placeholder={placeholder}
+            className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white resize-none
+              ${isFocused 
+                ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
+                : hasValue 
+                  ? 'border-blue-300 shadow-md hover:border-blue-400' 
+                  : 'border-gray-200 hover:border-gray-300 shadow-sm'
+              }
+              focus:outline-none text-gray-900`}
+          />
+        ) : (
+          <input
+            type={type}
+            name={name}
+            value={value}
+            onChange={onChange}
+            onFocus={onFocus}
+            onBlur={onBlur}
+            required={required}
+            placeholder={placeholder}
+            className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white
+              ${isFocused 
+                ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
+                : hasValue 
+                  ? 'border-blue-300 shadow-md hover:border-blue-400' 
+                  : 'border-gray-200 hover:border-gray-300 shadow-sm'
+              }
+              focus:outline-none text-gray-900`}
+          />
+        )}
+        
+        <div className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors duration-200 ${
+          isFocused ? 'text-blue-500' : hasValue ? 'text-blue-400' : 'text-gray-400'
+        }`}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+    </div>
+  );
+};
 const EnseignantForm = ({ 
   onSubmit, 
   onCancel, 
@@ -19,25 +124,45 @@ const EnseignantForm = ({
   initialData = null,
   isEditing = false 
 }) => {
+  // ✅ CORRECTION: Fonctions utilitaires pour extraction sécurisée
+  const extractSafeValue = (value, defaultValue = '') => {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object') {
+      return value.nom || value.name || value.label || defaultValue;
+    }
+    return String(value);
+  };
+
+  const extractSafeId = (value, defaultValue = '') => {
+    if (value === null || value === undefined) return defaultValue;
+    if (typeof value === 'object') {
+      return value.id || defaultValue;
+    }
+    return String(value);
+  };
+console.log(initialData)
+  // ✅ CORRECTION: Initialisation sécurisée des données
   const [formData, setFormData] = useState({
-    nom: initialData?.nom || '',
-    prenom: initialData?.prenom || '',
-    email: initialData?.email || '',
-    telephone: initialData?.telephone || '',
-    adresse: initialData?.adresse || '',
-    matiere_id: initialData?.matiere_id || '',
-    specialite: initialData?.specialite || '',
-    date_embauche: initialData?.date_embauche || ''
+    nom: extractSafeValue(initialData.user?.nom, ''),
+    prenom: extractSafeValue(initialData.user?.prenom, ''),
+    email: extractSafeValue(initialData.user?.email, ''),
+    telephone: extractSafeValue(initialData.user?.telephone, ''),
+    adresse: extractSafeValue(initialData.user?.adresse, ''),
+    matiere_id: extractSafeId(initialData.matiere_id || initialData.matiere, ''),
+    specialite: extractSafeValue(initialData.specialite, ''),
+    date_embauche: extractSafeValue(initialData.created_at , '')
   });
 
   const [loading, setLoading] = useState(false);
   const [focusedField, setFocusedField] = useState(null);
 
+  // Handlers
   const handleInputChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    const { name, value } = e.target;
+    setFormData(prevData => ({
+      ...prevData,
+      [name]: value
+    }));
   };
 
   const handleSubmit = async (e) => {
@@ -45,116 +170,25 @@ const EnseignantForm = ({
     setLoading(true);
     
     try {
-      await onSubmit(formData);
+      // ✅ CORRECTION: Validation des données avant envoi
+      const submitData = {
+        nom: formData.nom.trim(),
+        prenom: formData.prenom.trim(),
+        email: formData.email.trim(),
+        telephone: formData.telephone.trim(),
+        adresse: formData.adresse.trim(),
+        matiere_id: formData.matiere_id,
+        specialite: formData.specialite.trim(),
+        date_embauche: formData.date_embauche
+      };
+
+      await onSubmit(submitData);
     } catch (error) {
-      console.error('Erreur lors de la soumission:', error);
+      console.error('❌ Erreur lors de la soumission:', error);
     } finally {
       setLoading(false);
     }
   };
-
-  const InputField = ({ 
-    icon: Icon, 
-    label, 
-    name, 
-    type = "text", 
-    required = false, 
-    placeholder = "", 
-    options = null,
-    rows = null 
-  }) => {
-    const isFocused = focusedField === name;
-    const hasValue = formData[name];
-    
-    return (
-      <div className="group">
-        <label className={`block text-sm font-medium mb-2 transition-colors duration-200 ${
-          isFocused ? 'text-blue-600' : 'text-gray-700'
-        }`}>
-          <div className="flex items-center space-x-2">
-            <Icon className={`w-4 h-4 transition-colors duration-200 ${
-              isFocused ? 'text-blue-500' : hasValue ? 'text-blue-400' : 'text-gray-400'
-            }`} />
-            <span>{label} {required && <span className="text-red-500">*</span>}</span>
-          </div>
-        </label>
-        
-        <div className="relative">
-          {type === 'select' ? (
-            <select
-              name={name}
-              value={formData[name]}
-              onChange={handleInputChange}
-              onFocus={() => setFocusedField(name)}
-              onBlur={() => setFocusedField(null)}
-              required={required}
-              className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white
-                ${isFocused 
-                  ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
-                  : hasValue 
-                    ? 'border-blue-300 shadow-md hover:border-blue-400' 
-                    : 'border-gray-200 hover:border-gray-300 shadow-sm'
-                }
-                focus:outline-none text-gray-900`}
-            >
-              <option value="">{placeholder}</option>
-              {options.map(option => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          ) : type === 'textarea' ? (
-            <textarea
-              name={name}
-              value={formData[name]}
-              onChange={handleInputChange}
-              onFocus={() => setFocusedField(name)}
-              onBlur={() => setFocusedField(null)}
-              required={required}
-              rows={rows || 3}
-              placeholder={placeholder}
-              className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white resize-none
-                ${isFocused 
-                  ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
-                  : hasValue 
-                    ? 'border-blue-300 shadow-md hover:border-blue-400' 
-                    : 'border-gray-200 hover:border-gray-300 shadow-sm'
-                }
-                focus:outline-none text-gray-900`}
-            />
-          ) : (
-            <input
-              type={type}
-              name={name}
-              value={formData[name]}
-              onChange={handleInputChange}
-              onFocus={() => setFocusedField(name)}
-              onBlur={() => setFocusedField(null)}
-              required={required}
-              placeholder={placeholder}
-              className={`w-full pl-11 pr-4 py-3 border-2 rounded-xl transition-all duration-200 bg-white
-                ${isFocused 
-                  ? 'border-blue-500 ring-4 ring-blue-100 shadow-lg transform scale-[1.02]' 
-                  : hasValue 
-                    ? 'border-blue-300 shadow-md hover:border-blue-400' 
-                    : 'border-gray-200 hover:border-gray-300 shadow-sm'
-                }
-                focus:outline-none text-gray-900`}
-            />
-          )}
-          
-          {/* Icône dans le champ */}
-          <div className={`absolute left-3 top-1/2 transform -translate-y-1/2 transition-colors duration-200 ${
-            isFocused ? 'text-blue-500' : hasValue ? 'text-blue-400' : 'text-gray-400'
-          }`}>
-            <Icon className="w-5 h-5" />
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
       <div className="grid grid-cols-1 gap-8">
@@ -174,6 +208,11 @@ const EnseignantForm = ({
               name="prenom"
               required
               placeholder="Entrez le prénom"
+              value={formData.prenom}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('prenom')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'prenom'}
             />
             
             <InputField
@@ -182,6 +221,11 @@ const EnseignantForm = ({
               name="nom"
               required
               placeholder="Entrez le nom de famille"
+              value={formData.nom}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('nom')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'nom'}
             />
             
             <InputField
@@ -191,6 +235,11 @@ const EnseignantForm = ({
               type="email"
               required
               placeholder="enseignant@ecole.com"
+              value={formData.email}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('email')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'email'}
             />
             
             <InputField
@@ -199,6 +248,11 @@ const EnseignantForm = ({
               name="telephone"
               type="tel"
               placeholder="+221 XX XXX XX XX"
+              value={formData.telephone}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('telephone')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'telephone'}
             />
             
             <div className="md:col-span-2 lg:col-span-3">
@@ -209,11 +263,15 @@ const EnseignantForm = ({
                 type="textarea"
                 rows={3}
                 placeholder="Adresse complète de l'enseignant"
+                value={formData.adresse}
+                onChange={handleInputChange}
+                onFocus={() => setFocusedField('adresse')}
+                onBlur={() => setFocusedField(null)}
+                isFocused={focusedField === 'adresse'}
               />
             </div>
           </div>
         </div>
-
         {/* Section Informations professionnelles */}
         <div className="bg-gradient-to-br from-gray-50 to-slate-50 rounded-2xl p-6 border border-gray-200">
           <div className="flex items-center space-x-3 mb-6">
@@ -235,6 +293,11 @@ const EnseignantForm = ({
                 value: matiere.id,
                 label: matiere.nom
               }))}
+              value={formData.matiere_id}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('matiere_id')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'matiere_id'}
             />
             
             <InputField
@@ -242,6 +305,11 @@ const EnseignantForm = ({
               label="Spécialité"
               name="specialite"
               placeholder="Ex: Algèbre, Littérature contemporaine..."
+              value={formData.specialite}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('specialite')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'specialite'}
             />
             
             <InputField
@@ -249,12 +317,16 @@ const EnseignantForm = ({
               label="Date d'embauche"
               name="date_embauche"
               type="date"
+              value={formData.date_embauche}
+              onChange={handleInputChange}
+              onFocus={() => setFocusedField('date_embauche')}
+              onBlur={() => setFocusedField(null)}
+              isFocused={focusedField === 'date_embauche'}
             />
           </div>
         </div>
       </div>
-
-      {/* Boutons d'action - Version Sticky */}
+      {/* Boutons d'action */}
       <div className="sticky bottom-0 bg-white border-t border-gray-200 pt-6 mt-8 -mx-6 -mb-6 px-6 pb-6 rounded-b-2xl">
         <div className="flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-4">
           <button

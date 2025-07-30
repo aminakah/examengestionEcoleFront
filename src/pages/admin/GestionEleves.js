@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Plus, Edit, Trash2, Eye, Mail, Phone, MapPin } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Badge, Loading, EmptyState, TableWithAdvancedScroll } from '../components/UIComponents';
-import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
-import Modal from '../components/Modal';
-import EleveForm from '../components/EleveForm';
-import EleveDetailsModal from '../components/EleveDetailsModal';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Badge, Loading, EmptyState, TableWithAdvancedScroll } from '../../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../../utils/formatters';
+import Modal from '../../components/Modal';
+import EleveForm from '../../components/EleveForm';
+import EleveDetailsModal from '../../components/EleveDetailsModal';
 
 const GestionEleves = () => {
   const [eleves, setEleves] = useState([]);
@@ -169,12 +169,12 @@ const GestionEleves = () => {
       onClick: handleEdit,
       variant: 'default'
     },
-    {
-      icon: Trash2,
-      label: 'Supprimer',
-      onClick: handleDelete,
-      variant: 'danger'
-    }
+    // {
+    //   icon: Trash2,
+    //   label: 'Supprimer',
+    //   onClick: handleDelete,
+    //   variant: 'danger'
+    // }
   ];
 
   const pageActions = [

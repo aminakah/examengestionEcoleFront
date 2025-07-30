@@ -1,0 +1,33 @@
+import React, { useState } from 'react';
+import { 
+  School, 
+  Users, 
+  BookOpen,
+  Award,
+  Save,
+  X
+} from 'lucide-react';
+
+const ClasseForm = ({ 
+  onSubmit, 
+  onCancel, 
+  initialData = null,
+  isEditing = false 
+}) => {
+  const [formData, setFormData] = useState({
+    nom: initialData?.nom || '',
+    niveau: initialData?.niveau || '',
+    effectif: initialData?.effectif || 0
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
+
+  const niveaux = ['6ème', '5ème', '4ème', '3ème'];
+
+  const handleInputChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+  };

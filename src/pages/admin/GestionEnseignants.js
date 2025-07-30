@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { UserCheck, Plus, Edit, Trash2, Mail, Phone, BookOpen, GraduationCap, Eye } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, TableWithAdvancedScroll, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
-import Modal from '../components/Modal';
-import EnseignantForm from '../components/EnseignantForm';
-import EnseignantDetailsModal from '../components/EnseignantDetailsModal';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, TableWithAdvancedScroll, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../../utils/formatters';
+import Modal from '../../components/Modal';
+import EnseignantForm from '../../components/EnseignantForm';
+import EnseignantDetailsModal from '../../components/EnseignantDetailsModal';
 
 const GestionEnseignants = () => {
   const [enseignants, setEnseignants] = useState([]);
@@ -176,12 +176,12 @@ const GestionEnseignants = () => {
       onClick: handleEdit,
       variant: 'default'
     },
-    {
-      icon: Trash2,
-      label: 'Supprimer',
-      onClick: handleDelete,
-      variant: 'danger'
-    }
+    // {
+    //   icon: Trash2,
+    //   label: 'Supprimer',
+    //   onClick: handleDelete,
+    //   variant: 'danger'
+    // }
   ];
 
   const pageActions = [

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { BookOpen, Plus, Edit, Trash2, Clock, Users, Eye, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitial } from '../utils/formatters';
-import Modal from '../components/Modal';
-import MatiereForm from '../components/MatiereForm';
-import MatiereDetailsModal from '../components/MatiereDetailsModal';
-import { schoolService, teacherService } from '../services';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitial } from '../../utils/formatters';
+import Modal from '../../components/Modal';
+import MatiereForm from '../../components/MatiereForm';
+import MatiereDetailsModal from '../../components/MatiereDetailsModal';
+import { schoolService, teacherService } from '../../services';
 
 const GestionMatieres = () => {
   const [niveaux, setNiveaux] = useState([]);

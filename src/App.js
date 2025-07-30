@@ -16,14 +16,14 @@ import SmartDashboard from './components/dashboard/SmartDashboard';
 import GradeManager from './components/GradeManager';
 
 // Pages existantes
-import GestionEleves from './pages/GestionEleves';
-import GestionEnseignants from './pages/GestionEnseignants';
-import GestionClasses from './pages/GestionClasses';
-import GestionMatieres from './pages/GestionMatieres';
-import GestionEmploiDuTemps from './pages/GestionEmploiDuTemps';
-import SaisieNotesAmelioree from './pages/SaisieNotesAmelioree';
-import BulletinsAdmin from './pages/BulletinsAdmin';
-import BulletinsParentAmélioré from './pages/BulletinsParentAmélioré';
+import GestionEleves from './pages/admin/GestionEleves';
+import GestionEnseignants from './pages/admin/GestionEnseignants';
+import GestionClasses from './pages/admin/GestionClasses';
+import GestionMatieres from './pages/admin/GestionMatieres';
+import GestionEmploiDuTemps from './pages/admin/GestionEmploiDuTemps';
+
+import BulletinsAdmin from './pages/admin/BulletinsAdmin';
+import BulletinsParentAmélioré from './pages/parents/BulletinsParentAmélioré';
 import GestionDocuments from './pages/GestionDocuments';
 
 // Nouveaux composants d'amélioration de sécurité - Amélioration pour l'audit
@@ -35,6 +35,8 @@ import { usePermission } from './components/common/RouteProtection';
 
 // Styles
 import './styles/designSystem';
+import SaisieNoteEnseignant from './pages/enseignants/SaisieNoteEnseignant';
+import BulletinsEnseignant from './pages/enseignants/BulletinsEnseignant';
 
 /**
  * Configuration globale de l'application
@@ -125,9 +127,9 @@ const AuthenticatedApp = () => {
             <RoleProtectedRoute allowedRoles={['enseignant']}>
               <Routes>
                 <Route path="notes" element={<GradeManager />} />
-                <Route path="notes-legacy" element={<SaisieNotesAmelioree />} />
+                <Route path="notes-legacy" element={<SaisieNoteEnseignant />} />
                 <Route path="mes-classes" element={<div>Mes Classes</div>} />
-                <Route path="bulletins" element={<BulletinsAdmin />} />
+                <Route path="bulletins" element={<BulletinsEnseignant />} />
               </Routes>
             </RoleProtectedRoute>
           } 

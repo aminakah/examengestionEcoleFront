@@ -114,13 +114,13 @@ const EleveDetailsModal = ({ isOpen, onClose, eleve }) => {
             <InfoField
               icon={User}
               label="Nom complet"
-              value={`${eleve.prenom} ${eleve.nom}`}
+              value={`${eleve.user.prenom} ${eleve.user.nom}`}
             />
             
             <InfoField
               icon={Mail}
               label="Adresse e-mail"
-              value={eleve.email}
+              value={eleve.user.email}
               isEmail={true}
             />
             
@@ -129,9 +129,9 @@ const EleveDetailsModal = ({ isOpen, onClose, eleve }) => {
               label="Date de naissance"
               value={eleve.date_naissance && (
                 <div>
-                  <div>{formatDate(eleve.date_naissance)}</div>
+                  <div>{formatDate(eleve.user.date_naissance)}</div>
                   <div className="text-sm text-gray-600 mt-1">
-                    ({calculateAge(eleve.date_naissance)})
+                    ({calculateAge(eleve.user.date_naissance)})
                   </div>
                 </div>
               )}
@@ -140,33 +140,33 @@ const EleveDetailsModal = ({ isOpen, onClose, eleve }) => {
             <InfoField
               icon={Users}
               label="Classe"
-              value={eleve.classe_nom}
+              value={eleve.inscriptions[0]?.classe[0]?.nom}
             />
             
-            {eleve.adresse && (
+            {eleve.user.adresse && (
               <InfoField
                 icon={MapPin}
                 label="Adresse"
-                value={eleve.adresse}
+                value={eleve.user.adresse}
               />
             )}
           </InfoCard>
 
           {/* Informations parent/tuteur */}
           <InfoCard icon={UserCheck} title="Parent / Tuteur légal" color="gray">
-            {(eleve.parent_prenom || eleve.parent_nom) && (
+            {(eleve.parents[0].user.name|| eleve.parents[0].user.nom) && (
               <InfoField
                 icon={User}
                 label="Nom du parent/tuteur"
-                value={`${eleve.parent_prenom || ''} ${eleve.parent_nom || ''}`.trim()}
+                value={`${eleve.parents[0].user.name|| ''} ${eleve.parents[0].user.nom || ''}`.trim()}
               />
             )}
             
-            {eleve.parent_email && (
+            {eleve.parents[0].user.email && (
               <InfoField
                 icon={Mail}
                 label="E-mail du parent/tuteur"
-                value={eleve.parent_email}
+                value={eleve.parents[0].user.email}
                 isEmail={true}
               />
             )}
@@ -181,7 +181,7 @@ const EleveDetailsModal = ({ isOpen, onClose, eleve }) => {
             )}
 
             {/* Message si aucune info parent */}
-            {!eleve.parent_prenom && !eleve.parent_nom && !eleve.parent_email && !eleve.telephone_parent && (
+            {!eleve.parents[0].user.name&&  (
               <div className="text-center py-8 text-gray-500">
                 <Info className="w-8 h-8 mx-auto mb-2 opacity-50" />
                 <p>Aucune information de contact parental renseignée</p>

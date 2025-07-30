@@ -45,23 +45,23 @@ export default function GradeManager() {
   const [showGradeForm, setShowGradeForm] = useState(false);
 
   // Charger les données de référence
-  useEffect(() => {
-    const loadReferenceData = async () => {
-      try {
-        const [subjectsResponse, periodsResponse] = await Promise.all([
-          subjectService.getSubjects(),
-          periodService.getPeriods()
-        ]);
+  // useEffect(() => {
+  //   const loadReferenceData = async () => {
+  //     try {
+  //       const [subjectsResponse, periodsResponse] = await Promise.all([
+  //         subjectService.getSubjects(),
+  //         periodService.getPeriods()
+  //       ]);
         
-        setSubjects(subjectsResponse.data || subjectsResponse);
-        setPeriods(periodsResponse.data || periodsResponse);
-      } catch (err) {
-        showError('Erreur lors du chargement des données de référence');
-      }
-    };
+  //       setSubjects(subjectsResponse.data || subjectsResponse);
+  //       setPeriods(periodsResponse.data || periodsResponse);
+  //     } catch (err) {
+  //       showError('Erreur lors du chargement des données de référence');
+  //     }
+  //   };
 
-    loadReferenceData();
-  }, [showError]);
+  //   loadReferenceData();
+  // }, [showError]);
 
   // Gestion de la saisie individuelle
   const handleIndividualGrade = async (gradeData) => {

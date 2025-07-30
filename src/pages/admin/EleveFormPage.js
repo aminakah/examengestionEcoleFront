@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Users, ArrowLeft, Save } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Loading } from '../components/UIComponents';
-import EleveForm from '../components/EleveForm';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Loading } from '../../components/UIComponents';
+import EleveForm from '../../components/EleveForm';
 
 const EleveFormPage = () => {
   const navigate = useNavigate();

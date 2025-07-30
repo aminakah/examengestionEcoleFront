@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { School, Plus, Edit, Trash2, Users, BookOpen, Eye } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitial } from '../utils/formatters';
-import Modal from '../components/Modal';
-import ClasseForm from '../components/ClasseForm';
-import ClasseDetailsModal from '../components/ClasseDetailsModal';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitial } from '../../utils/formatters';
+import Modal from '../../components/Modal';
+import ClasseForm from '../../components/ClasseForm';
+import ClasseDetailsModal from '../../components/ClasseDetailsModal';
 
 const GestionClasses = () => {
   const [classes, setClasses] = useState([]);
@@ -17,15 +17,33 @@ const GestionClasses = () => {
   const [selectedClasse, setSelectedClasse] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Fonction utilitaire pour extraire le nom du niveau
+  // ✅ CORRECTION 1: Fonction utilitaire robuste pour extraire le nom du niveau
   const getNiveauName = (niveau) => {
     if (!niveau) return 'Non défini';
-    return typeof niveau === 'object' ? niveau.nom : niveau;
+    
+    // Si c'est un objet, essayer d'extraire le nom
+    if (typeof niveau === 'object') {
+      return niveau.nom || niveau.name || 'Niveau non défini';
+    }    
+    // Si c'est une string ou autre type primitif
+    return String(niveau);
   };
 
-  // Fonction utilitaire pour extraire l'effectif
+  // ✅ CORRECTION 2: Fonction utilitaire robuste pour extraire l'effectif
   const getEffectif = (effectif) => {
-    return typeof effectif === 'number' ? effectif : 0;
+    // Convertir en nombre et s'assurer que c'est valide
+    const numEffectif = Number(effectif);
+    return isNaN(numEffectif) ? 0 : Math.max(0, numEffectif);
+  };
+
+  // ✅ CORRECTION 3: Fonction pour normaliser les données de classe
+  const normalizeClasseData = (classe) => {
+    return {
+      ...classe,
+      nom: classe.nom || 'Classe sans nom',
+      niveau: getNiveauName(classe.niveau),
+      effectif: getEffectif(classe.effectif)
+    };
   };
 
   useEffect(() => {
@@ -35,16 +53,16 @@ const GestionClasses = () => {
   const loadClasses = async () => {
     try {
       const response = await apiService.get('/classes');
-      console.log('📊 Structure des données classes:', response.data);
-      
+      console.log('📊 Structure des données classes:', response.data);      
       // Vérifier que les données sont bien un array
-      const classesData = Array.isArray(response.data) ? response.data : [];
+      let classesData = Array.isArray(response.data) ? response.data : [];
+      
+      // ✅ CORRECTION 4: Normaliser toutes les données avant de les stocker
+      classesData = classesData.map(normalizeClasseData);
       
       // Debug : afficher la structure d'une classe pour comprendre le format
       if (classesData.length > 0) {
-        console.log('📋 Exemple de classe:', classesData[0]);
-        console.log('🎯 Type de niveau:', typeof classesData[0].niveau, classesData[0].niveau);
-        console.log('📈 Type d\'effectif:', typeof classesData[0].effectif, classesData[0].effectif);
+        console.log('📋 Exemple de classe normalisée:', classesData[0]);
       }
       
       setClasses(classesData);
@@ -60,29 +78,33 @@ const GestionClasses = () => {
     try {
       if (editingClasse) {
         const response = await apiService.put(`/classes/${editingClasse.id}`, formData);
+        const updatedClasse = normalizeClasseData(response.data);
         setClasses(classes.map(classe => 
-          classe.id === editingClasse.id ? response.data : classe
-        ));
-      } else {
+          classe.id === editingClasse.id ? updatedClasse : classe
+        ));      } else {
         const response = await apiService.post('/classes', formData);
-        setClasses([...classes, response.data]);
+        const newClasse = normalizeClasseData(response.data);
+        setClasses([...classes, newClasse]);
       }
       closeModal();
       alert(editingClasse ? 'Classe modifiée avec succès!' : 'Classe ajoutée avec succès!');
     } catch (error) {
       console.error('Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de la classe');
-      throw error; // Re-throw pour gérer le loading dans le form
+      throw error;
     }
   };
 
+  // ✅ CORRECTION 5: Normaliser les données avant édition
   const handleEdit = (classe) => {
-    setEditingClasse(classe);
+    const normalizedClasse = normalizeClasseData(classe);
+    setEditingClasse(normalizedClasse);
     setShowModal(true);
   };
 
   const handleViewDetails = (classe) => {
-    setSelectedClasse(classe);
+    const normalizedClasse = normalizeClasseData(classe);
+    setSelectedClasse(normalizedClasse);
     setShowDetailsModal(true);
   };
 
@@ -90,7 +112,6 @@ const GestionClasses = () => {
     setEditingClasse(null);
     setShowModal(true);
   };
-
   const closeModal = () => {
     setEditingClasse(null);
     setShowModal(false);
@@ -114,16 +135,14 @@ const GestionClasses = () => {
     }
   };
 
-
-
+  // ✅ CORRECTION 6: Améliorer la fonction de filtrage
   const filteredClasses = Array.isArray(classes) ? classes.filter(classe => {
-    const classeNom = classe.nom ? classe.nom.toLowerCase() : '';
+    const classeNom = (classe.nom || '').toLowerCase();
     const niveauNom = getNiveauName(classe.niveau).toLowerCase();
+    const searchLower = searchTerm.toLowerCase();
     
-    return classeNom.includes(searchTerm.toLowerCase()) ||
-           niveauNom.includes(searchTerm.toLowerCase());
+    return classeNom.includes(searchLower) || niveauNom.includes(searchLower);
   }) : [];
-
   const columns = [
     {
       key: 'nom',
@@ -131,7 +150,7 @@ const GestionClasses = () => {
       render: (value, row) => (
         <div className="flex items-center space-x-3">
           <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-blue-600 rounded-full flex items-center justify-center text-white font-bold">
-            {getInitial(value)}
+            {getInitial(value || 'C')}
           </div>
           <div>
             <div className="font-medium text-gray-900">{value || 'Nom non renseigné'}</div>
@@ -153,12 +172,11 @@ const GestionClasses = () => {
       render: (value) => (
         <div className="flex items-center space-x-2">
           <Users className="w-4 h-4 text-gray-400" />
-          <span className="font-medium">{getEffectif(value)} élèves</span>
+          <span className="font-medium">{getEffectif(value)} élève{getEffectif(value) > 1 ? 's' : ''}</span>
         </div>
       )
     }
   ];
-
   const actions = [
     {
       icon: Eye,
@@ -189,12 +207,11 @@ const GestionClasses = () => {
     }
   ];
 
-  // Statistiques
+  // ✅ CORRECTION 7: Calculs statistiques sécurisés
   const totalClasses = Array.isArray(classes) ? classes.length : 0;
   const totalEleves = Array.isArray(classes) ? 
     classes.reduce((sum, classe) => sum + getEffectif(classe.effectif), 0) : 0;
   const moyenneEffectif = totalClasses > 0 ? Math.round(totalEleves / totalClasses) : 0;
-
   if (loading) {
     return (
       <PageLayout title="Gestion des Classes" icon={School}>
@@ -227,8 +244,7 @@ const GestionClasses = () => {
           icon={Users}
           color="indigo"
           trend={`${moyenneEffectif} moy/classe`}
-        />
-        <StatsCard
+        />        <StatsCard
           title="Effectif Moyen"
           value={moyenneEffectif}
           icon={BookOpen}

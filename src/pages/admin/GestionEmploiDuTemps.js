@@ -24,9 +24,9 @@ import {
   classeService, 
   enseignantService, 
   matiereService 
-} from '../services/emploiTempsService';
-import { api } from '../services/api';
-import notificationService from '../services/notificationService';
+} from '../../services/emploiTempsService';
+import { api } from '../../services/api';
+import notificationService from '../../services/notificationService';
 
 const GestionEmploiDuTemps = () => {
   // États pour les données

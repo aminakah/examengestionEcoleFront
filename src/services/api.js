@@ -59,43 +59,26 @@ class ApiService {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         
-        // Créer une erreur personnalisée qui préserve les informations HTTP
-        const customError = new Error(errorData.message || `HTTP Error: ${response.status}`);
-        customError.status = response.status;
-        customError.response = { status: response.status, data: errorData };
-        customError.request = response;
-        
         // Gestion spécifique des erreurs d'authentification
         if (response.status === 401) {
           // Pour les routes publiques, ne pas supprimer le token automatiquement
           if (!isPublicRoute) {
             this.setToken(null); // Supprimer le token invalide
-            customError.message = 'Session expirée. Veuillez vous reconnecter.';
+            throw new Error('Session expirée. Veuillez vous reconnecter.');
           } else {
             // Pour la connexion, renvoyer l'erreur spécifique
-            customError.message = errorData.message || 'Identifiants incorrects.';
+            throw new Error(errorData.message || 'Identifiants incorrects.');
           }
         }
         
-        throw customError;
+        throw new Error(errorData.message || `HTTP Error: ${response.status}`);
       }
 
       const result = await response.json();
       return result;
     } catch (error) {
       console.error(`❌ API Error - ${method} ${endpoint}:`, error);
-      
-      // Si c'est déjà notre erreur personnalisée, la relancer telle quelle
-      if (error.response || error.status) {
-        throw error;
-      }
-      
-      // Sinon, créer une erreur personnalisée pour les erreurs réseau
-      const networkError = new Error(error.message || 'Erreur de connexion réseau');
-      networkError.request = true; // Marquer comme erreur réseau
-      networkError.original = error;
-      
-      throw networkError;
+      throw error;
     }
   }
 

@@ -1,0 +1,34 @@
+import React, { useState } from 'react';
+import { 
+  User, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  BookOpen, 
+  GraduationCap,
+  Calendar,
+  Award,
+  Save,
+  X
+} from 'lucide-react';
+
+const EnseignantForm = ({ 
+  onSubmit, 
+  onCancel, 
+  matieres = [], 
+  initialData = null,
+  isEditing = false 
+}) => {
+  const [formData, setFormData] = useState({
+    nom: initialData?.nom || '',
+    prenom: initialData?.prenom || '',
+    email: initialData?.email || '',
+    telephone: initialData?.telephone || '',
+    adresse: initialData?.adresse || '',
+    matiere_id: initialData?.matiere_id || '',
+    specialite: initialData?.specialite || '',
+    date_embauche: initialData?.date_embauche || ''
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);

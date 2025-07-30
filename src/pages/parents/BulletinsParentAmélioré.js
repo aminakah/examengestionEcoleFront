@@ -3,12 +3,12 @@ import {
   User, Download, Eye, Calendar, TrendingUp, TrendingDown, 
   Award, BookOpen, BarChart3, Mail, Phone, MapPin, Home
 } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitials, formatFullName, formatDate, formatEmail, formatPhone, getInitial } from '../utils/formatters';
-import { bulletinService } from '../services';
-import { api } from '../services/api';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitials, formatFullName, formatDate, formatEmail, formatPhone, getInitial } from '../../utils/formatters';
+import { bulletinService } from '../../services';
+import { api } from '../../services/api';
 
 const BulletinsParentAmélioré = () => {
   const [enfants, setEnfants] = useState([]);

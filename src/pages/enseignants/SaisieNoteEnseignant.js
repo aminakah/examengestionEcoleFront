@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Award, Plus, Edit, Save, Users, BookOpen, Calculator, TrendingUp } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitials, formatFullName, formatEmail } from '../utils/formatters';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitials, formatFullName, formatEmail } from '../../utils/formatters';
 
-const SaisieNotes = () => {
+const SaisieNoteEnseignant = () => {
   const [eleves, setEleves] = useState([]);
   const [classes, setClasses] = useState([]);
   const [matieres, setMatieres] = useState([]);
@@ -17,70 +17,143 @@ const SaisieNotes = () => {
   const [evaluationType, setEvaluationType] = useState('devoir');
   const [evaluationDate, setEvaluationDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  // États pour optimiser les appels API
+  const [loadingEleves, setLoadingEleves] = useState(false);
+  const [loadingNotes, setLoadingNotes] = useState(false);
+  const [elevesCache, setElevesCache] = useState(new Map()); // Cache des élèves par classe
+  const [notesCache, setNotesCache] = useState(new Map()); // Cache des notes
 
+  // ✅ FIX 1: Chargement initial optimisé
   useEffect(() => {
-    if (selectedClasse && selectedMatiere) {
-      loadEleves();
-      loadNotes();
-    }
-  }, [selectedClasse, selectedMatiere]);
+    loadInitialData();
+  }, []); // ← Pas de dépendances, exécuté une seule fois
 
-  const loadData = async () => {
+  // ✅ FIX 2: useCallback pour éviter les re-créations de fonctions
+  const loadInitialData = useCallback(async () => {
     try {
+      setLoading(true);
+      console.log('📚 [SaisieNotes] Chargement des données initiales...');
+      
       const [classesRes, matieresRes] = await Promise.all([
         apiService.get('/classes'),
         apiService.get('/matieres')
       ]);
       
+      console.log('✅ [SaisieNotes] Données initiales chargées');
       setClasses(classesRes.data);
       setMatieres(matieresRes.data);
     } catch (error) {
-      console.error('Erreur lors du chargement:', error);
+      console.error('❌ [SaisieNotes] Erreur lors du chargement initial:', error);
     } finally {
       setLoading(false);
     }
-  };
+  }, []); // ← Pas de dépendances externes
 
-  const loadEleves = async () => {
-    if (!selectedClasse) return;
+  // ✅ FIX 3: Fonction loadEleves optimisée avec cache
+  const loadEleves = useCallback(async (classeId) => {
+    if (!classeId) return;
+    
+    // Vérifier le cache d'abord
+    const cacheKey = classeId.toString();
+    if (elevesCache.has(cacheKey)) {
+      console.log('📋 [SaisieNotes] Élèves récupérés du cache pour classe:', classeId);
+      setEleves(elevesCache.get(cacheKey));
+      return;
+    }
     
     try {
-      const response = await apiService.get(`/classes/${selectedClasse}/eleves`);
-      setEleves(response.data);
+      setLoadingEleves(true);
+      console.log('📡 [SaisieNotes] Chargement des élèves pour classe:', classeId);
+      
+      const response = await apiService.get(`/classes/${classeId}/eleves`);
+      const elevesData = response.data;
+      
+      // Mettre en cache
+      setElevesCache(prev => new Map(prev.set(cacheKey, elevesData)));
+      setEleves(elevesData);
+      
+      console.log('✅ [SaisieNotes] Élèves chargés et mis en cache');
     } catch (error) {
-      console.error('Erreur lors du chargement des élèves:', error);
+      console.error('❌ [SaisieNotes] Erreur lors du chargement des élèves:', error);
+      setEleves([]);
+    } finally {
+      setLoadingEleves(false);
     }
-  };
+  }, [elevesCache]);
 
-  const loadNotes = async () => {
-    if (!selectedClasse || !selectedMatiere) return;
+  // ✅ FIX 4: Fonction loadNotes optimisée avec cache
+  const loadNotes = useCallback(async (classeId, matiereId) => {
+    if (!classeId || !matiereId) return;
+    
+    // Clé de cache combinée
+    const cacheKey = `${classeId}-${matiereId}`;
+    if (notesCache.has(cacheKey)) {
+      console.log('📋 [SaisieNotes] Notes récupérées du cache pour:', cacheKey);
+      setNotes(notesCache.get(cacheKey));
+      return;
+    }
     
     try {
-      const response = await apiService.get(`/notes?classe_id=${selectedClasse}&matiere_id=${selectedMatiere}`);
-      setNotes(response.data);
+      setLoadingNotes(true);
+      console.log('📡 [SaisieNotes] Chargement des notes pour:', cacheKey);
+      
+      const response = await apiService.get(`/notes?classe_id=${classeId}&matiere_id=${matiereId}`);
+      const notesData = response.data;
+      
+      // Mettre en cache
+      setNotesCache(prev => new Map(prev.set(cacheKey, notesData)));
+      setNotes(notesData);
+      
+      console.log('✅ [SaisieNotes] Notes chargées et mises en cache');
     } catch (error) {
-      console.error('Erreur lors du chargement des notes:', error);
+      console.error('❌ [SaisieNotes] Erreur lors du chargement des notes:', error);
+      setNotes([]);
+    } finally {
+      setLoadingNotes(false);
     }
-  };
+  }, [notesCache]);
 
-  const handleNoteChange = (eleveId, value) => {
+  // ✅ FIX 5: useEffect optimisé avec debouncing
+  useEffect(() => {
+    if (!selectedClasse || !selectedMatiere) {
+      setEleves([]);
+      setNotes([]);
+      return;
+    }
+
+    console.log('🔄 [SaisieNotes] Changement de sélection:', { selectedClasse, selectedMatiere });
+    
+    // Debounce pour éviter les appels trop fréquents
+    const timeoutId = setTimeout(() => {
+      loadEleves(selectedClasse);
+      loadNotes(selectedClasse, selectedMatiere);
+    }, 300); // 300ms de délai
+
+    return () => {
+      clearTimeout(timeoutId);
+      console.log('⏹️ [SaisieNotes] Annulation du timeout précédent');
+    };
+  }, [selectedClasse, selectedMatiere, loadEleves, loadNotes]);
+
+  // ✅ FIX 6: Gestion optimisée des changements de notes
+  const handleNoteChange = useCallback((eleveId, value) => {
     const noteValue = value === '' ? null : parseFloat(value);
     
-    setEleves(eleves.map(eleve => 
+    setEleves(prevEleves => prevEleves.map(eleve => 
       eleve.id === eleveId 
         ? { ...eleve, note_temp: noteValue }
         : eleve
     ));
-  };
+  }, []);
 
-  const saveNote = async (eleveId) => {
+  // ✅ FIX 7: Sauvegarde individuelle optimisée
+  const saveNote = useCallback(async (eleveId) => {
     const eleve = eleves.find(e => e.id === eleveId);
     if (!eleve || eleve.note_temp === undefined) return;
 
     try {
+      console.log('💾 [SaisieNotes] Sauvegarde note pour élève:', eleveId);
+      
       const noteData = {
         eleve_id: eleveId,
         matiere_id: selectedMatiere,
@@ -91,21 +164,31 @@ const SaisieNotes = () => {
 
       await apiService.post('/notes', noteData);
       
-      // Mettre à jour l'élève pour marquer la note comme sauvegardée
-      setEleves(eleves.map(e => 
+      // Mettre à jour l'élève et invalider le cache des notes
+      setEleves(prevEleves => prevEleves.map(e => 
         e.id === eleveId 
           ? { ...e, note_actuelle: e.note_temp, note_temp: undefined }
           : e
       ));
       
+      // Invalider le cache des notes pour cette combinaison
+      const cacheKey = `${selectedClasse}-${selectedMatiere}`;
+      setNotesCache(prev => {
+        const newCache = new Map(prev);
+        newCache.delete(cacheKey);
+        return newCache;
+      });
+      
+      console.log('✅ [SaisieNotes] Note sauvegardée avec succès');
       alert('Note sauvegardée avec succès!');
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('❌ [SaisieNotes] Erreur lors de la sauvegarde:', error);
       alert('Erreur lors de la sauvegarde de la note');
     }
-  };
+  }, [eleves, selectedMatiere, evaluationType, evaluationDate, selectedClasse]);
 
-  const saveAllNotes = async () => {
+  // ✅ FIX 8: Sauvegarde groupée optimisée
+  const saveAllNotes = useCallback(async () => {
     const elevesWithNotes = eleves.filter(e => e.note_temp !== undefined && e.note_temp !== null);
     
     if (elevesWithNotes.length === 0) {
@@ -114,53 +197,101 @@ const SaisieNotes = () => {
     }
 
     try {
-      const promises = elevesWithNotes.map(eleve => {
-        const noteData = {
-          eleve_id: eleve.id,
-          matiere_id: selectedMatiere,
-          note: eleve.note_temp,
-          type: evaluationType,
-          date_evaluation: evaluationDate
-        };
-        return apiService.post('/notes', noteData);
-      });
+      console.log(`💾 [SaisieNotes] Sauvegarde groupée de ${elevesWithNotes.length} notes...`);
+      
+      // Préparer toutes les données
+      const notesData = elevesWithNotes.map(eleve => ({
+        eleve_id: eleve.id,
+        matiere_id: selectedMatiere,
+        note: eleve.note_temp,
+        type: evaluationType,
+        date_evaluation: evaluationDate
+      }));
 
-      await Promise.all(promises);
+      // ✅ OPTIMISATION: Appel API groupé au lieu de multiples appels
+      // Option 1: Si votre API supporte la sauvegarde en batch
+      try {
+        await apiService.post('/notes/batch', { notes: notesData });
+      } catch (batchError) {
+        // Option 2: Fallback avec Promise.all mais avec limitation
+        console.log('📡 [SaisieNotes] Batch non supporté, utilisation de Promise.all avec limitation');
+        
+        // Traiter par chunks de 5 pour éviter la surcharge
+        const chunkSize = 5;
+        for (let i = 0; i < notesData.length; i += chunkSize) {
+          const chunk = notesData.slice(i, i + chunkSize);
+          const promises = chunk.map(noteData => apiService.post('/notes', noteData));
+          await Promise.all(promises);
+          
+          // Petite pause entre les chunks
+          if (i + chunkSize < notesData.length) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+          }
+        }
+      }
       
       // Mettre à jour tous les élèves
-      setEleves(eleves.map(e => 
+      setEleves(prevEleves => prevEleves.map(e => 
         e.note_temp !== undefined 
           ? { ...e, note_actuelle: e.note_temp, note_temp: undefined }
           : e
       ));
       
+      // Invalider le cache des notes
+      const cacheKey = `${selectedClasse}-${selectedMatiere}`;
+      setNotesCache(prev => {
+        const newCache = new Map(prev);
+        newCache.delete(cacheKey);
+        return newCache;
+      });
+      
+      console.log('✅ [SaisieNotes] Toutes les notes sauvegardées avec succès');
       alert(`${elevesWithNotes.length} note(s) sauvegardée(s) avec succès!`);
     } catch (error) {
-      console.error('Erreur lors de la sauvegarde:', error);
+      console.error('❌ [SaisieNotes] Erreur lors de la sauvegarde groupée:', error);
       alert('Erreur lors de la sauvegarde des notes');
     }
-  };
+  }, [eleves, selectedMatiere, evaluationType, evaluationDate, selectedClasse]);
 
-  const filteredEleves = eleves.filter(eleve =>
-    eleve.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eleve.prenom.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  // ✅ FIX 9: Memoization des données calculées
+  const filteredEleves = useMemo(() => {
+    return eleves.filter(eleve =>
+      eleve.nom?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      eleve.prenom?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [eleves, searchTerm]);
 
-  // Statistiques
-  const elevesAvecNotes = eleves.filter(e => e.note_actuelle !== null && e.note_actuelle !== undefined);
-  const moyenneClasse = elevesAvecNotes.length > 0 
-    ? Math.round((elevesAvecNotes.reduce((sum, e) => sum + e.note_actuelle, 0) / elevesAvecNotes.length) * 100) / 100
-    : 0;
-  const tauxCompletion = eleves.length > 0 ? Math.round((elevesAvecNotes.length / eleves.length) * 100) : 0;
+  // Statistiques memoizées
+  const stats = useMemo(() => {
+    const elevesAvecNotes = eleves.filter(e => e.note_actuelle !== null && e.note_actuelle !== undefined);
+    const moyenneClasse = elevesAvecNotes.length > 0 
+      ? Math.round((elevesAvecNotes.reduce((sum, e) => sum + e.note_actuelle, 0) / elevesAvecNotes.length) * 100) / 100
+      : 0;
+    const tauxCompletion = eleves.length > 0 ? Math.round((elevesAvecNotes.length / eleves.length) * 100) : 0;
+    
+    return { elevesAvecNotes, moyenneClasse, tauxCompletion };
+  }, [eleves]);
 
-  const pageActions = [
-    {
-      label: 'Sauvegarder toutes les notes',
-      icon: Save,
-      onClick: saveAllNotes,
-      variant: 'success'
-    }
-  ];
+  // ✅ FIX 10: Actions memoizées
+  const pageActions = useMemo(() => {
+    if (!selectedClasse || !selectedMatiere) return [];
+    
+    return [
+      {
+        label: 'Sauvegarder toutes les notes',
+        icon: Save,
+        onClick: saveAllNotes,
+        variant: 'success'
+      }
+    ];
+  }, [selectedClasse, selectedMatiere, saveAllNotes]);
+
+  // ✅ FIX 11: Fonction de nettoyage du cache
+  const clearCache = useCallback(() => {
+    setElevesCache(new Map());
+    setNotesCache(new Map());
+    console.log('🧹 [SaisieNotes] Cache vidé');
+  }, []);
 
   if (loading) {
     return (
@@ -172,13 +303,30 @@ const SaisieNotes = () => {
 
   return (
     <PageLayout
-      title="Saisie de nms Notes"
-      subtitle="Gérez les évaluations et notes des élèves"
+      title="Saisie de Notes (Optimisée)"
+      subtitle="Gérez les évaluations et notes des élèves - Version optimisée"
       icon={Award}
-      actions={selectedClasse && selectedMatiere ? pageActions : []}
+      actions={pageActions}
       searchValue={searchTerm}
       onSearchChange={(e) => setSearchTerm(e.target.value)}
     >
+      {/* Indicateurs de performance pour debug */}
+      <div className="mb-4 p-3 bg-blue-50 rounded-lg text-sm">
+        <div className="flex justify-between items-center">
+          <span>🔧 Debug Performance:</span>
+          <div className="flex gap-2">
+            <span>Cache Élèves: {elevesCache.size}</span>
+            <span>Cache Notes: {notesCache.size}</span>
+            <button 
+              onClick={clearCache}
+              className="px-2 py-1 bg-blue-200 rounded text-xs hover:bg-blue-300"
+            >
+              Vider Cache
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Filtres de sélection */}
       <Card title="Sélection de l'évaluation" className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -188,7 +336,10 @@ const SaisieNotes = () => {
             </label>
             <select
               value={selectedClasse}
-              onChange={(e) => setSelectedClasse(e.target.value)}
+              onChange={(e) => {
+                console.log('📝 [SaisieNotes] Changement de classe:', e.target.value);
+                setSelectedClasse(e.target.value);
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Sélectionner une classe</option>
@@ -206,7 +357,10 @@ const SaisieNotes = () => {
             </label>
             <select
               value={selectedMatiere}
-              onChange={(e) => setSelectedMatiere(e.target.value)}
+              onChange={(e) => {
+                console.log('📝 [SaisieNotes] Changement de matière:', e.target.value);
+                setSelectedMatiere(e.target.value);
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="">Sélectionner une matière</option>
@@ -250,6 +404,13 @@ const SaisieNotes = () => {
 
       {selectedClasse && selectedMatiere && (
         <>
+          {/* Indicateurs de chargement */}
+          {(loadingEleves || loadingNotes) && (
+            <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-700">
+              ⏳ Chargement en cours... {loadingEleves && 'Élèves'} {loadingNotes && 'Notes'}
+            </div>
+          )}
+
           {/* Statistiques */}
           <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
             <StatsCard
@@ -260,24 +421,24 @@ const SaisieNotes = () => {
             />
             <StatsCard
               title="Notes saisies"
-              value={elevesAvecNotes.length}
+              value={stats.elevesAvecNotes.length}
               icon={Award}
               color="green"
-              trend={`${tauxCompletion}% complété`}
+              trend={`${stats.tauxCompletion}% complété`}
             />
             <StatsCard
               title="Moyenne classe"
-              value={`${moyenneClasse}/20`}
+              value={`${stats.moyenneClasse}/20`}
               icon={Calculator}
               color="orange"
-              trend={moyenneClasse >= 10 ? "Satisfaisant" : "À améliorer"}
+              trend={stats.moyenneClasse >= 10 ? "Satisfaisant" : "À améliorer"}
             />
             <StatsCard
               title="Progression"
-              value={`${tauxCompletion}%`}
+              value={`${stats.tauxCompletion}%`}
               icon={TrendingUp}
               color="purple"
-              trend={tauxCompletion === 100 ? "Terminé" : "En cours"}
+              trend={stats.tauxCompletion === 100 ? "Terminé" : "En cours"}
             />
           </div>
 
@@ -392,4 +553,4 @@ const SaisieNotes = () => {
   );
 };
 
-export default SaisieNotes;
+export default SaisieNoteEnseignant;

@@ -3,15 +3,15 @@ import {
   Shield, FileText, Users, BarChart3, TrendingUp, Download, 
   Eye, Settings, Calendar, Award, AlertCircle, CheckCircle
 } from 'lucide-react';
-import { apiService } from '../services/apiService';
-import PageLayout from '../components/PageLayout';
-import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../components/UIComponents';
-import { getInitials, formatFullName } from '../utils/formatters';
+import { apiService } from '../../services/apiService';
+import PageLayout from '../../components/PageLayout';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { getInitials, formatFullName } from '../../utils/formatters';
 
 // Import sécurisé des services avec fallback
 let bulletinService;
 try {
-  bulletinService = require('../services').bulletinService;
+  bulletinService = require('../../services').bulletinService;
 } catch (error) {
   console.warn('Service bulletinService non disponible, utilisation d\'apiService');
   bulletinService = {

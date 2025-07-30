@@ -20,10 +20,6 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // État pour les erreurs de connexion persistantes - NOUVELLE FONCTIONNALITÉ
-  const [loginError, setLoginError] = useState(null);
-  const [loginSuccess, setLoginSuccess] = useState(null);
 
   // État pour la gestion de session - Amélioration pour l'audit
   const [sessionManager, setSessionManager] = useState(null);
@@ -128,82 +124,24 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (credentials) => {
     try {
-      console.log('🔐 [AuthContext] Début de la connexion avec:', credentials.email);
       setLoading(true);
-      
-      // Effacer les messages précédents
-      setLoginError(null);
-      setLoginSuccess(null);
-      
       const response = await authService.login(credentials);
-      console.log('📡 [AuthContext] Réponse du service:', response);
       
       if (response.user) {
-        console.log('✅ [AuthContext] Utilisateur trouvé:', response.user.email);
         setUser(response.user);
         setIsAuthenticated(true);
-        
-        // Message de succès persistant
-        setLoginSuccess('Connexion réussie !');
         
         // Initialiser la gestion de session après connexion - Amélioration pour l'audit
         initializeSessionManager();
         
-        console.log('🎉 [AuthContext] Connexion réussie !');
         return { success: true, user: response.user };
       } else {
-        console.log('❌ [AuthContext] Pas d\'utilisateur dans la réponse');
         throw new Error('Réponse de connexion invalide');
       }
     } catch (error) {
-      console.error('❌ [AuthContext] Erreur login:', error);
-      console.log('🔍 [AuthContext] Type d\'erreur:', {
-        hasResponse: !!error.response,
-        status: error.response?.status,
-        hasRequest: !!error.request,
-        message: error.message
-      });
-      
-      // Gestion des erreurs persistantes dans le contexte
-      let errorMessage = "La connexion n'a pas pu être établie.";
-      
-      if (error.response && error.response.status) {
-        switch (error.response.status) {
-          case 401:
-            errorMessage = "Email ou mot de passe incorrect.";
-            break;
-          case 403:
-            errorMessage = "Accès refusé. Votre compte est peut-être suspendu.";
-            break;
-          case 422:
-            errorMessage = "Données de connexion invalides.";
-            break;
-          case 500:
-            errorMessage = "Erreur serveur. Veuillez réessayer plus tard.";
-            break;
-          default:
-            errorMessage = `Erreur de connexion (${error.response.status}). Veuillez réessayer.`;
-        }
-      } else if (error.request) {
-        errorMessage = "Impossible de se connecter au serveur. Vérifiez votre connexion internet.";
-      } else if (error.message) {
-        errorMessage = error.message.includes('Identifiants') ? error.message : `Erreur : ${error.message}`;
-      }
-      
-      // Stocker l'erreur dans le contexte (persistant)
-      setLoginError(errorMessage);
-      console.log('💾 [AuthContext] Erreur stockée dans le contexte:', errorMessage);
-      
-      // Effacer l'erreur automatiquement après 15 secondes
-      setTimeout(() => {
-        setLoginError(null);
-        console.log('🧹 [AuthContext] Erreur effacée automatiquement');
-      }, 15000);
-      
-      // Préserver l'erreur originale avec toutes ses propriétés
+      console.error('Erreur login:', error);
       throw error;
     } finally {
-      console.log('🏁 [AuthContext] Fin de la tentative de connexion');
       setLoading(false);
     }
   };
@@ -236,11 +174,6 @@ export const AuthProvider = ({ children }) => {
       hideWarnings();
       setUser(null);
       setIsAuthenticated(false);
-      
-      // Effacer les messages de connexion lors de la déconnexion
-      setLoginError(null);
-      setLoginSuccess(null);
-      console.log('🧹 [AuthContext] Messages de connexion effacés lors de la déconnexion');
     }
   };
 
@@ -307,13 +240,6 @@ export const AuthProvider = ({ children }) => {
     return userPermissions.includes(permission);
   };
 
-  // Fonction pour effacer les messages de connexion
-  const clearLoginMessages = () => {
-    setLoginError(null);
-    setLoginSuccess(null);
-    console.log('🧹 [AuthContext] Messages de connexion effacés manuellement');
-  };
-
   const value = {
     user,
     loading,
@@ -329,11 +255,7 @@ export const AuthProvider = ({ children }) => {
     // Nouvelles fonctions de gestion de session - Amélioration pour l'audit
     extendSession,
     sessionManager,
-    sessionInfo: sessionManager?.getSessionInfo(),
-    // Messages de connexion persistants - NOUVELLE FONCTIONNALITÉ
-    loginError,
-    loginSuccess,
-    clearLoginMessages
+    sessionInfo: sessionManager?.getSessionInfo()
   };
 
   return (

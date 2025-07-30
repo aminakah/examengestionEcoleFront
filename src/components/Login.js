@@ -9,50 +9,40 @@ export default function Login() {
     password: ''
   });
   const [isLoading, setIsLoading] = useState(false);
-  
-  const [localSuccess, setLocalSuccess] = useState('');
-  const [localError, setLocalError] = useState('');
+  const [success, setSuccess] = useState('');
+  const [error, setError] = useState('');
 
-  const { 
-    login, 
-    isAuthenticated, 
-    loading, 
-    user,
-    loginError,   
-    loginSuccess, 
-    clearLoginMessages
-  } = useAuth();
-  
-  const error = loginError || localError;
-  const success = loginSuccess || localSuccess;
-  
- 
-
+  const { login } = useAuth();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    // Effacer les messages précédents (local et contexte)
-    setLocalError('');
-    setLocalSuccess('');
-    clearLoginMessages();
 
     if (!credentials.email || !credentials.password) {
-      setLocalError('Veuillez remplir tous les champs');
+      setError('Veuillez remplir tous les champs');
       return;
     }
 
     try {
       setIsLoading(true);
-      console.log('🔄 [Login] Tentative de connexion avec:', credentials.email);
-      
       await login(credentials);
-      
-      console.log('✅ [Login] Connexion réussie !');
-      
+      setSuccess('Connexion réussie !');
+      setError('');
     } catch (err) {
-      console.log('❌ [Login] Erreur attrapée (traitée dans le contexte):', err.message);
- 
+      console.log(err);
       
+      // Gestion simple des erreurs
+      let errorMessage = "Erreur de connexion";
+      
+      if (err.response && err.response.status === 401) {
+        errorMessage = "Email ou mot de passe incorrect.";
+      } else if (err.request) {
+        errorMessage = "Impossible de se connecter au serveur.";
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
+      setError(errorMessage);
+      setSuccess('');
     } finally {
       setIsLoading(false);
     }
@@ -68,37 +58,13 @@ export default function Login() {
 
   const demoAccounts = [
     { email: 'admin@gestionecole.com', password: 'admin123', role: 'Administrateur' },
-    { email: 'aissatou.faye118@eleve.gestionecole.comm', password: 'password123', role: 'Eleve' },
-    { email: 'parent.faye17@parent.gestionecole.com',password: 'password123', role: 'Parent' },
+    { email: 'superadmin@gestionecole.com', password: 'superadmin123', role: 'Super Admin' },
+    { email: 'admin@ecole.com', password: 'password', role: 'Admin Test' },
     { email: 'aminata.fall@gestionecole.com', password: 'password123', role: 'Enseignant' },
   ];
 
   const fillDemoCredentials = (email, password) => {
     setCredentials({ email, password });
-  };
-
-  // Fonction de test pour vérifier l'affichage des erreurs
-  const testError = () => {
-    setLocalError('Test d\'erreur LOCAL - Si vous voyez ce message, l\'affichage des erreurs fonctionne !');
-    setLocalSuccess('');
-    clearLoginMessages(); // Effacer les messages du contexte
-    console.log('🧪 [Login] Test d\'erreur locale activé');
-    
-    // Effacer après 5 secondes
-    setTimeout(() => {
-      setLocalError('');
-    }, 5000);
-  };
-
-  // Test avec de mauvaises données
-  const testBadLogin = async () => {
-    console.log('🚨 [Login] Test avec de mauvaises données');
-    setCredentials({ email: 'mauvais@email.com', password: 'mauvaispassword' });
-    
-    // Attendre un petit moment puis déclencher la connexion
-    setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} });
-    }, 500);
   };
 
   return (
@@ -117,23 +83,13 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {success && (
-              <div className="p-4 text-green-800 bg-green-100 border border-green-300 rounded-lg shadow-sm">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                  {success}
-                </div>
+              <div className="p-3 text-green-700 bg-green-100 border border-green-300 rounded-md">
+                {success}
               </div>
             )}
             {error && (
-              <div className="p-4 text-red-800 bg-red-100 border border-red-300 rounded-lg shadow-sm">
-                <div className="flex items-center">
-                  <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                  </svg>
-                  {error}
-                </div>
+              <div className="p-3 text-red-700 bg-red-100 border border-red-300 rounded-md">
+                {error}
               </div>
             )}
 
@@ -202,7 +158,6 @@ export default function Login() {
                 </button>
               ))}
             </div>
-           
           </div>
 
           <div className="mt-6 text-center">
