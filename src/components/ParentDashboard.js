@@ -29,6 +29,7 @@ export default function ParentDashboard() {
     bulletins: [],
     loading: false
   });
+  console.log(myChildren)
 
   // Charger les données d'un enfant
   const loadChildData = async (childId) => {
