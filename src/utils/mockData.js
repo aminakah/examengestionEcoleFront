@@ -63,7 +63,13 @@ export const mockNotes = [
     coefficient: 4,
     periode: 'Trimestre 1',
     date: '2024-11-15',
-    type: 'Devoir'
+    type: 'Devoir',
+    eleve:{
+      user:{
+        name:"sdf",
+        nom:"sd"
+      }
+    }
   }
 ];
 

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useToast } from '../hooks/customHooks';
-import { useGrades, useTeacherData } from '../hooks/schoolHooks';
-import { useAuth } from '../context/AuthContext';
-import { classService, periodService, subjectService } from '../services';
-import LoadingSpinner from './LoadingSpinner';
+import { useToast } from '../../../hooks/customHooks';
+import { useGrades, useTeacherData } from '../../../hooks/schoolHooks';
+import { useAuth } from '../../../context/AuthContext';
+import { classService, periodService, subjectService } from '../../../services';
+import LoadingSpinner from '../../LoadingSpinner';
 
 
 /**

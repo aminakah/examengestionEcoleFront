@@ -10,7 +10,7 @@ import {
   BarChart3,
   Target
 } from 'lucide-react';
-import Modal from './Modal';
+import Modal from '../../Modal';
 
 const ClasseDetailsModal = ({ isOpen, onClose, classe }) => {
   if (!classe) return null;

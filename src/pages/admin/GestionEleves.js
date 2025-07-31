@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Trash2, Eye, Mail, Phone, MapPin } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, Eye, Mail, Phone, MapPin, UserCheck, BookOpen } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import PageLayout from '../../components/PageLayout';
-import { Card, Badge, Loading, EmptyState, TableWithAdvancedScroll } from '../../components/UIComponents';
+import { Card, Badge, Loading, EmptyState, Table, StatsCard } from '../../components/UIComponents';
 import { getInitials, formatFullName, formatEmail } from '../../utils/formatters';
 import Modal from '../../components/Modal';
-import EleveForm from '../../components/EleveForm';
-import EleveDetailsModal from '../../components/EleveDetailsModal';
+import EleveForm from '../../components/profiles/admin/EleveForm';
+import EleveDetailsModal from '../../components/profiles/admin/EleveDetailsModal';
+import { api } from '../../services/api';
 
 const GestionEleves = () => {
   const [eleves, setEleves] = useState([]);
@@ -25,8 +26,8 @@ const GestionEleves = () => {
   const loadData = async () => {
     try {
       const [elevesRes, classesRes] = await Promise.all([
-        apiService.get('/eleves'),
-        apiService.get('/classes')
+        api.get('/eleves'),
+        api.get('/classes')
       ]);
       
       console.log(elevesRes.data);
@@ -100,9 +101,11 @@ const GestionEleves = () => {
 
 
   const filteredEleves = eleves.filter(eleve =>
-    eleve.user.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eleve.user.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    eleve.user.mail.toLowerCase().includes(searchTerm.toLowerCase())
+    eleve.user.nom.toLowerCase().includes(searchTerm.toLowerCase())
+     ||
+    eleve.user.name.toLowerCase().includes(searchTerm.toLowerCase())
+     ||
+    eleve.user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const columns = [
@@ -204,6 +207,22 @@ const GestionEleves = () => {
       onSearchChange={(e) => setSearchTerm(e.target.value)}
     >
       {/* Modal pour le formulaire */}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+              <StatsCard
+                title="Total Eleves"
+                value={eleves.length}
+                icon={UserCheck}
+                color="blue"
+              />
+              <StatsCard
+                title="Total Classes"
+                value={"18"}
+                icon={BookOpen}
+                color="indigo"
+              />
+          
+            </div>
       <Modal
         isOpen={showModal}
         onClose={closeModal}
@@ -237,16 +256,10 @@ const GestionEleves = () => {
             actionLabel="Ajouter un élève"
           />
         ) : (
-          <TableWithAdvancedScroll
+          <Table
             columns={columns}
             data={filteredEleves}
             actions={actions}
-            maxHeight="500px"
-            itemsPerPage={15}
-            showPagination={true}
-            stickyHeader={true}
-            stickyActions={true}
-            emptyMessage="Aucun élève trouvé avec ces critères"
           />
         )}
       </Card>

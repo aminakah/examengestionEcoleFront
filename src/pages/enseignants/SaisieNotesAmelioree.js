@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { apiService } from '../services/apiService';
-import notificationService, { NotificationService } from '../services/notificationService';
+import { useAuth } from '../../context/AuthContext';
+import { apiService } from '../../services/apiService';
+import notificationService, { NotificationService } from '../../services/notificationService';
 import { 
   BookOpen, 
   Save, 

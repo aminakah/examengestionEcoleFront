@@ -1,6 +1,5 @@
 import React from 'react';
 import { MoreHorizontal, Edit, Trash2, Eye } from 'lucide-react';
-import TableWithAdvancedScroll from './TableWithAdvancedScroll';
 
 // Composant Card uniforme
 export const Card = ({ 
@@ -203,6 +202,3 @@ export const EmptyState = ({
     </div>
   );
 };
-
-// Export du composant table avancé
-export { TableWithAdvancedScroll };

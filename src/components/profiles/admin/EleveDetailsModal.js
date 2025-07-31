@@ -12,7 +12,7 @@ import {
   Info,
   Clock
 } from 'lucide-react';
-import Modal from './Modal';
+import Modal from '../../Modal';
 
 const EleveDetailsModal = ({ isOpen, onClose, eleve }) => {
   if (!eleve) return null;

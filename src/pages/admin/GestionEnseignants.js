@@ -2,11 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { UserCheck, Plus, Edit, Trash2, Mail, Phone, BookOpen, GraduationCap, Eye } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import PageLayout from '../../components/PageLayout';
-import { Card, TableWithAdvancedScroll, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
+import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
 import { getInitials, formatFullName, formatEmail } from '../../utils/formatters';
 import Modal from '../../components/Modal';
-import EnseignantForm from '../../components/EnseignantForm';
-import EnseignantDetailsModal from '../../components/EnseignantDetailsModal';
+import EnseignantForm from '../../components/profiles/admin/EnseignantForm';
+import EnseignantDetailsModal from '../../components/profiles/admin/EnseignantDetailsModal';
 
 const GestionEnseignants = () => {
   const [enseignants, setEnseignants] = useState([]);
@@ -271,16 +271,10 @@ const GestionEnseignants = () => {
             actionLabel="Ajouter un enseignant"
           />
         ) : (
-          <TableWithAdvancedScroll
+          <Table
             columns={columns}
             data={filteredEnseignants}
             actions={actions}
-            maxHeight="450px"
-            itemsPerPage={12}
-            showPagination={true}
-            stickyHeader={true}
-            stickyActions={true}
-            emptyMessage="Aucun enseignant trouvé avec ces critères de recherche"
           />
         )}
       </Card>

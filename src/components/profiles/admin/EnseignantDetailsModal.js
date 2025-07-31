@@ -13,7 +13,7 @@ import {
   Clock,
   UserCheck
 } from 'lucide-react';
-import Modal from './Modal';
+import Modal from '../../Modal';
 
 const EnseignantDetailsModal = ({ isOpen, onClose, enseignant }) => {
   if (!enseignant) return null;

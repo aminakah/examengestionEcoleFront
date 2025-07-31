@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { authService } from '../services';
-import { useAuth } from '../context/AuthContext';
-import { useToast } from '../hooks/customHooks';
+import { authService } from '../../services';
+import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../hooks/customHooks';
 
 export default function Login() {
   const [credentials, setCredentials] = useState({

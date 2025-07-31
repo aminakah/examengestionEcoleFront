@@ -14,7 +14,7 @@ import {
   Target,
   Star
 } from 'lucide-react';
-import Modal from './Modal';
+import Modal from '../../Modal';
 
 const MatiereDetailsModal = ({ isOpen, onClose, matiere }) => {
   if (!matiere) return null;

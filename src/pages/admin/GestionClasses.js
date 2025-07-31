@@ -5,8 +5,8 @@ import PageLayout from '../../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
 import { getInitial } from '../../utils/formatters';
 import Modal from '../../components/Modal';
-import ClasseForm from '../../components/ClasseForm';
-import ClasseDetailsModal from '../../components/ClasseDetailsModal';
+import ClasseForm from '../../components/profiles/admin/ClasseForm';
+import ClasseDetailsModal from '../../components/profiles/admin/ClasseDetailsModal';
 
 const GestionClasses = () => {
   const [classes, setClasses] = useState([]);

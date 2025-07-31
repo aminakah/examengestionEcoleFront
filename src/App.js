@@ -10,10 +10,10 @@ import {
 } from './components/common/RouteProtection';
 
 // Composants de pages
-import Login from './components/Login';
-import MainLayout from './components/MainLayout';
+import Login from './components/shared/Login';
+import MainLayout from './components/shared/MainLayout';
 import SmartDashboard from './components/dashboard/SmartDashboard';
-import GradeManager from './components/GradeManager';
+import GradeManager from './components/profiles/enseignant/GradeManager';
 
 // Pages existantes
 import GestionEleves from './pages/admin/GestionEleves';
@@ -26,8 +26,10 @@ import BulletinsAdmin from './pages/admin/BulletinsAdmin';
 import BulletinsParentAmélioré from './pages/parents/BulletinsParentAmélioré';
 import GestionDocuments from './pages/GestionDocuments';
 
+// Import du nouveau composant de consultation des notes pour l'admin
+import ConsultationNotes from './pages/admin/ConsultationNotes';
+
 // Nouveaux composants d'amélioration de sécurité - Amélioration pour l'audit
-import SecurityImprovementsDemo from './components/SecurityImprovementsDemo';
 
 // Services et hooks
 import { configureServices, setupAPIInterceptors } from './services';
@@ -37,6 +39,10 @@ import { usePermission } from './components/common/RouteProtection';
 import './styles/designSystem';
 import SaisieNoteEnseignant from './pages/enseignants/SaisieNoteEnseignant';
 import BulletinsEnseignant from './pages/enseignants/BulletinsEnseignant';
+
+// Import des nouveaux composants de saisie pour les enseignants
+import SaisieNotes from './pages/enseignants/SaisieNotes';
+import SaisieNotesAmelioree from './pages/enseignants/SaisieNotesAmelioree';
 
 /**
  * Configuration globale de l'application
@@ -113,8 +119,10 @@ const AuthenticatedApp = () => {
                 <Route path="emploi-du-temps" element={<GestionEmploiDuTemps />} />
                 <Route path="documents" element={<GestionDocuments />} />
                 <Route path="bulletins" element={<BulletinsAdmin />} />
-                {/* Route de démo des améliorations de sécurité - Amélioration pour l'audit */}
-                <Route path="security-demo" element={<SecurityImprovementsDemo />} />
+                <Route path="notes" element={<ConsultationNotes />} />
+                {/* Route de démo des améliorations de sécurité - temporairement désactivée */}
+                {/* <Route path="security-demo" element={<SecurityImprovementsDemo />} /> */}
+              
               </Routes>
             </RoleProtectedRoute>
           } 
@@ -127,6 +135,8 @@ const AuthenticatedApp = () => {
             <RoleProtectedRoute allowedRoles={['enseignant']}>
               <Routes>
                 <Route path="notes" element={<GradeManager />} />
+                <Route path="saisie-notes" element={<SaisieNotes />} />
+                <Route path="saisie-notes-amelioree" element={<SaisieNotesAmelioree />} />
                 <Route path="notes-legacy" element={<SaisieNoteEnseignant />} />
                 <Route path="mes-classes" element={<div>Mes Classes</div>} />
                 <Route path="bulletins" element={<BulletinsEnseignant />} />

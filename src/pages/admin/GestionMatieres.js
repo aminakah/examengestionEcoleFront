@@ -5,8 +5,8 @@ import PageLayout from '../../components/PageLayout';
 import { Card, Table, Badge, Loading, EmptyState, StatsCard } from '../../components/UIComponents';
 import { getInitial } from '../../utils/formatters';
 import Modal from '../../components/Modal';
-import MatiereForm from '../../components/MatiereForm';
-import MatiereDetailsModal from '../../components/MatiereDetailsModal';
+import MatiereForm from '../../components/profiles/admin/MatiereForm';
+import MatiereDetailsModal from '../../components/profiles/admin/MatiereDetailsModal';
 import { schoolService, teacherService } from '../../services';
 
 const GestionMatieres = () => {
