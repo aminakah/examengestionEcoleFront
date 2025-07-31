@@ -42,15 +42,13 @@ const Sidebar = ({ isOpen, onClose, isMobile }) => {
         { path: '/admin/documents', label: 'Gestion des documents', icon: Upload, roles: ['administrateur'] },
         { path: '/admin/notes', label: 'Saisie des notes', icon: ClipboardList, roles: ['administrateur', 'enseignant'] },
         { path: '/admin/bulletins', label: 'Bulletins', icon: Award, roles: ['administrateur', 'enseignant'] },
-        // Nouvel item pour la démo de sécurité - Amélioration pour l'audit
-        { path: '/admin/security-demo', label: 'Améliorations Sécurité', icon: Shield, roles: ['administrateur'] }
       );
     }
 
     // Items administrateur et enseignant
     if ([ 'enseignant'].includes(user?.role)) {
       items.push(
-        { path: '/enseignant/notes', label: 'Saisie des notes', icon: ClipboardList, roles: [ 'enseignant'] },
+        { path: '/enseignant/saisie-notes-amelioree', label: 'Saisie des notes', icon: ClipboardList, roles: [ 'enseignant'] },
         { path: '/enseignant/bulletins', label: 'Bulletins', icon: Award, roles: [ 'enseignant'] }
       );
     }

@@ -551,36 +551,35 @@ function StudentDashboard({ data }) {
  */
 function ParentDashboard({ data }) {
   const stats = data?.roleSpecific || {};
+  console.log(stats)
 
   return (
     <div className="space-y-6">
       {/* Mes enfants */}
       <div className="bg-white rounded-lg shadow p-6">
-        <h3 className="text-lg font-semibold mb-4">Mes enfants</h3>
+        <h3 className="text-lg font-semibold mb-4">Mes eenfants</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {stats.myChildren?.map((child) => (
+          {stats.enfants_details?.map((child) => (
             <div key={child.id} className="border rounded-lg p-4">
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h4 className="font-medium text-gray-900">{child.nom} {child.prenom}</h4>
                   <p className="text-sm text-gray-600">{child.classe}</p>
+                  <p className="text-sm text-gray-600">{child.derniere_periode}</p>
+                 
+
                 </div>
                 <div className="text-right">
                   <span className="text-lg font-bold text-blue-600">
-                    {child.moyenne || 'N/A'}
+                    {child.moyenne_generale
+ || 'N/A'}
                   </span>
                   <div className="text-xs text-gray-500">Moyenne</div>
+
                 </div>
               </div>
               
-              <div className="space-y-2">
-                <button className="w-full text-left text-blue-600 text-sm hover:underline">
-                  Voir les notes
-                </button>
-                <button className="w-full text-left text-green-600 text-sm hover:underline">
-                  Télécharger bulletin
-                </button>
-              </div>
+              
             </div>
           ))}
         </div>

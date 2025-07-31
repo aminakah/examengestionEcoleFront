@@ -77,8 +77,8 @@ export default function ParentDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Espace Parent 👨‍👩‍👧‍👦</h1>
-            <p className="text-green-100 mt-2">
-              Bienvenue {user?.name}, suivez la scolarité de vos enfants
+            <p className="text-green-100 mt-2">sd
+              Bienvenue {user?.name}, suivez lsdfvba scolarité de vos enfants
             </p>
           </div>
           <div className="text-right">

@@ -14,6 +14,7 @@ import {
   Plus,
   Edit2
 } from 'lucide-react';
+import { api } from '../../services/api';
 
 const SaisieNotesAmelioree = () => {
   const { user } = useAuth();
@@ -46,22 +47,14 @@ const SaisieNotesAmelioree = () => {
     try {
       setLoading(true);
       const [classesRes, matieresRes] = await Promise.all([
-        apiService.get('/classes'),
-        apiService.get('/matieres')
+        api.get('/enseignant/mes-classes'),
       ]);
       
-      setClasses(classesRes.data);
+      setClasses(classesRes.data.classes[0]?.nom);
+      // setMatieres(classes.data.matiere)
+      console.log(classesRes.data.classes[0]?.nom);
       
-      // Filtrer les matières selon le rôle de l'utilisateur
-      if (user.role === 'enseignant') {
-        // Pour un enseignant, ne montrer que ses matières
-        const mesMatiers = matieresRes.data.filter(matiere => 
-          matiere.enseignant_id === user.id
-        );
-        setMatieres(mesMatiers);
-      } else {
-        setMatieres(matieresRes.data);
-      }
+     
     } catch (error) {
       console.error('Erreur chargement données:', error);
     } finally {

@@ -24,7 +24,7 @@ export default function GradeManager() {
   
   // Hook pour les données enseignant
   const { myClasses, loading: classesLoading } = useTeacherData();
-  
+    console.log(myClasses)
   // Hook pour les notes avec filtres
   const { 
     grades, 

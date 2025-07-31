@@ -431,7 +431,7 @@ const BulletinsEnseignant = () => {
       )}
 
       {/* Liste des bulletins */}
-      <Card title="Liste des bulletins">
+      <Card title="Liste dfvdes bulletins">
         {filteredBulletins.length === 0 ? (
           <EmptyState
             title="Aucun bulletin trouvé"

@@ -58,8 +58,8 @@ export default function Login() {
 
   const demoAccounts = [
     { email: 'admin@gestionecole.com', password: 'admin123', role: 'Administrateur' },
-    { email: 'parent.ndiaye96@parent.gestionecole.com', password: 'password123', role: 'Parent' },
-    { email: 'omar.ndiaye526@eleve.gestionecole.com', password: 'password123', role: 'Eleve' },
+    { email: 'parent.faye17@parent.gestionecole.com', password: 'password123', role: 'Parent' },
+    // { email: 'omar.ndiaye526@eleve.gestionecole.com', password: 'password123', role: 'Eleve' },
     { email: 'aminata.fall@gestionecole.com', password: 'password123', role: 'Enseignant' },
   ];
 

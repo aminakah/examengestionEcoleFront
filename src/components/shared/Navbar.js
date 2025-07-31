@@ -29,6 +29,7 @@ const Navbar = ({ onToggleSidebar, sidebarOpen, isMobile }) => {
       case 'administrateur': return 'Administrateur';
       case 'enseignant': return 'Enseignant';
       case 'parent': return 'Parent';
+      case 'eleve': return 'Eleve';
       default: return 'Utilisateur';
     }
   };

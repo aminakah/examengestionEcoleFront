@@ -1,7 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   User, Download, Eye, Calendar, TrendingUp, TrendingDown, 
-  Award, BookOpen, BarChart3, Mail, Phone, MapPin, Home
+  Award, BookOpen, BarChart3, Mail, Phone, MapPin, Home, AlertCircle
 } from 'lucide-react';
 import { apiService } from '../../services/apiService';
 import PageLayout from '../../components/PageLayout';
@@ -18,76 +18,125 @@ const BulletinsParentAmélioré = () => {
   const [selectedTrimestre, setSelectedTrimestre] = useState('');
   const [loading, setLoading] = useState(true);
   const [loadingBulletins, setLoadingBulletins] = useState(false);
+  const [error, setError] = useState(null);
+  const [bulletinError, setBulletinError] = useState(null);
 
- 
- const loadData = async () => {
+  // Message d'erreur personnalisé
+  const ErrorMessage = ({ message, onRetry }) => (
+    <Card className="border-red-200 bg-red-50">
+      <div className="flex items-center space-x-3 text-red-700">
+        <AlertCircle className="w-5 h-5" />
+        <div className="flex-1">
+          <p className="font-medium">Une erreur s'est produite</p>
+          <p className="text-sm text-red-600">{message}</p>
+        </div>
+        {onRetry && (
+          <button
+            onClick={onRetry}
+            className="px-3 py-1 text-sm bg-red-100 border border-red-300 rounded hover:bg-red-200"
+          >
+            Réessayer
+          </button>
+        )}
+      </div>
+    </Card>
+  );
+
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
-      // Chargement des enfants du parent connecté
-      const response = await bulletinService.mesEnfants();
-      const periods = await bulletinService.getPeriod();
+      setError(null);
       
-      setEnfants(response.data || []);
-      setTrimestres(periods.data || []);
+      console.log('🔄 Chargement des données parent...');
+      
+      // Chargement des enfants du parent connecté
+      const [enfantsResponse, periodsResponse] = await Promise.all([
+        bulletinService.mesEnfants().catch(err => {
+          console.error('❌ Erreur enfants:', err);
+          throw new Error('Impossible de charger la liste des enfants');
+        }),
+        bulletinService.getPeriod().catch(err => {
+          console.error('❌ Erreur périodes:', err);
+          throw new Error('Impossible de charger la liste des trimestres');
+        })
+      ]);
+      
+      console.log('✅ Données reçues:', { enfantsResponse, periodsResponse });
+      
+      const enfantsData = enfantsResponse.data || [];
+      const trimestreData = periodsResponse.data || [];
+      
+      setEnfants(enfantsData);
+      setTrimestres(trimestreData);
       
       // Sélection automatique du premier enfant et du premier trimestre
-      if (response.data && response.data.length > 0) {
-        const enfantId = response.data[0].id;
+      if (enfantsData.length > 0) {
+        const enfantId = enfantsData[0].id;
         setSelectedEnfant(enfantId);
-        console.log("Enfant sélectionné automatiquement:", enfantId);
+        console.log("✅ Enfant sélectionné automatiquement:", enfantId);
       }
       
-      if (periods.data && periods.data.length > 0) {
-        const trimestreId = periods.data[0].id;
+      if (trimestreData.length > 0) {
+        const trimestreId = trimestreData[0].id;
         setSelectedTrimestre(trimestreId);
-        console.log("Trimestre sélectionné automatiquement:", trimestreId);
+        console.log("✅ Trimestre sélectionné automatiquement:", trimestreId);
       }
+      
     } catch (error) {
-      console.error('Erreur lors du chargement:', error);
+      console.error('❌ Erreur lors du chargement:', error);
+      setError(error.message || 'Une erreur inattendue s\'est produite');
       setEnfants([]);
       setTrimestres([]);
     } finally {
       setLoading(false);
     }
-  };
-  useEffect(() => {
-    loadData();
   }, []);
 
-  
-useEffect(() => {
-  if (selectedEnfant && selectedTrimestre) {
-    loadBulletins();
-  }
-}, [selectedEnfant, selectedTrimestre]);
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
+  useEffect(() => {
+    if (selectedEnfant && selectedTrimestre) {
+      loadBulletins();
+    }
+  }, [selectedEnfant, selectedTrimestre]);
 
- 
-  const loadBulletins = async () => {
+  const loadBulletins = useCallback(async () => {
     if (!selectedEnfant || !selectedTrimestre) {
-      console.log("Enfant ou trimestre non sélectionné");
+      console.log("⚠️ Enfant ou trimestre non sélectionné");
       setBulletins([]);
       return;
     }
     
     try {
       setLoadingBulletins(true);
-      console.log('Chargement des bulletins pour:', { selectedEnfant, selectedTrimestre });
+      setBulletinError(null);
+      
+      console.log('🔄 Chargement des bulletins pour:', { selectedEnfant, selectedTrimestre });
       
       const response = await bulletinService.getBulletinsEnfants(selectedEnfant, selectedTrimestre);
-      console.log('Réponse bulsdfvsdletins:', response);
+      console.log('✅ Réponse bulletins:', response);
 
-      setBulletins(Array.isArray(response.data) ? response.data : [response.data].filter(Boolean));
+      if (response.success) {
+        setBulletins(Array.isArray(response.data) ? response.data : [response.data].filter(Boolean));
+      } else {
+        throw new Error(response.message || 'Réponse API invalide');
+      }
+      
     } catch (error) {
-      console.error('Erreur lors du chargement des bulletins:', error);
+      console.error('❌ Erreur lors du chargement des bulletins:', error);
+      setBulletinError(error.message || 'Impossible de charger le bulletin');
       setBulletins([]);
     } finally {
       setLoadingBulletins(false);
     }
-  };
+  }, [selectedEnfant, selectedTrimestre]);
 
   const downloadBulletin = async (bulletinId) => {
     try {
+      console.log('🔄 Téléchargement du bulletin:', bulletinId);
+      
       const response = await apiService.get(`/bulletins/${bulletinId}/download`, {
         responseType: 'blob'
       });
@@ -99,22 +148,27 @@ useEffect(() => {
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Téléchargement terminé');
+      
     } catch (error) {
-      console.error('Erreur lors du téléchargement:', error);
-      alert('Erreur lors du téléchargement du bulletin');
+      console.error('❌ Erreur lors du téléchargement:', error);
+      alert('Erreur lors du téléchargement du bulletin. Veuillez réessayer.');
     }
   };
 
+  // Données calculées avec vérifications robustes
   const enfantSelectionne = enfants.find(e => e.id == selectedEnfant);
   const trimestreSelectionne = trimestres.find(t => t.id == selectedTrimestre);
-  const bulletinActuel = bulletins.find(b => b.
-periode_id
- == selectedTrimestre || b.trimestre === selectedTrimestre);
-console.log(bulletins)
-console.log(bulletinActuel)
+  const bulletinActuel = bulletins.find(b => 
+    b.periode_id == selectedTrimestre || b.trimestre === selectedTrimestre
+  );
+
+  console.log('📊 État actuel:', { bulletins, bulletinActuel });
+
   // Calculs des statistiques avec vérifications de sécurité
-  const moyenneGenerale = bulletinActuel?.
-moyenne_generale || 0;
+  const moyenneGenerale = bulletinActuel?.moyenne_generale || 0;
   const evolutionMoyenne = bulletinActuel?.evolution || 0;
   const nombreMatieres = bulletinActuel?.notes?.length || 0;
   const matieresReussies = bulletinActuel?.notes?.filter(n => n?.moyenne >= 10).length || 0;
@@ -136,10 +190,18 @@ moyenne_generale || 0;
     );
   }
 
+  if (error) {
+    return (
+      <PageLayout title="Bulletins de Notes" icon={User}>
+        <ErrorMessage message={error} onRetry={loadData} />
+      </PageLayout>
+    );
+  }
+
   return (
     <PageLayout
       title="Bulletins de Notes"
-      subtitle="Consultez les résultats scolaires de vos enfants"
+      subtitle="Consultez les résultats scolqwsdfgvb vaires de vos enfants"
       icon={User}
       actions={pageActions}
       showSearch={false}
@@ -153,15 +215,23 @@ moyenne_generale || 0;
             </label>
             <select
               value={selectedEnfant}
-              onChange={(e) => setSelectedEnfant(e.target.value)}
+              onChange={(e) => {
+                setSelectedEnfant(e.target.value);
+                setBulletinError(null); // Reset l'erreur lors du changement
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={enfants.length === 0}
             >
+              <option value="">Sélectionner un enfant</option>
               {enfants.map(enfant => (
                 <option key={enfant.id} value={enfant.id}>
                   {enfant?.user?.prenom || 'Nom non disponible'} - {enfant?.inscriptions?.[0]?.classe?.nom || 'Classe non définie'}
                 </option>
               ))}
             </select>
+            {enfants.length === 0 && (
+              <p className="text-sm text-amber-600 mt-1">Aucun enfant trouvé</p>
+            )}
           </div>
 
           <div>
@@ -170,8 +240,12 @@ moyenne_generale || 0;
             </label>
             <select
               value={selectedTrimestre}
-              onChange={(e) => setSelectedTrimestre(e.target.value)}
+              onChange={(e) => {
+                setSelectedTrimestre(e.target.value);
+                setBulletinError(null); // Reset l'erreur lors du changement
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              disabled={trimestres.length === 0}
             >
               <option value="">Sélectionner un trimestre</option>
               {trimestres.map(trimestre => (
@@ -180,9 +254,20 @@ moyenne_generale || 0;
                 </option>
               ))}
             </select>
+            {trimestres.length === 0 && (
+              <p className="text-sm text-amber-600 mt-1">Aucun trimestre disponible</p>
+            )}
           </div>
         </div>
       </Card>
+
+      {/* Affichage des erreurs de bulletin */}
+      {bulletinError && (
+        <ErrorMessage 
+          message={bulletinError} 
+          onRetry={() => loadBulletins()} 
+        />
+      )}
 
       {enfantSelectionne && (
         <>
@@ -239,7 +324,7 @@ moyenne_generale || 0;
             </Card>
           )}
 
-          {selectedTrimestre && !loadingBulletins && bulletinActuel && (
+          {selectedTrimestre && !loadingBulletins && !bulletinError && bulletinActuel && (
             <>
               {/* Statistiques générales */}
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
@@ -276,78 +361,82 @@ moyenne_generale || 0;
 
               {/* Détail des notes par matière */}
               <Card title={`Détail des notes - ${trimestreSelectionne?.nom || 'Trimestre sélectionné'}`}>
-                <div className="overflow-x-auto">
-                  <table className="min-w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Matière
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          1 Devoir
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          2 Devoir
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Composition
-                        </th>
-                        
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Moyenne
-                        </th>
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Coefficient
-                        </th>
-                       
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Appréciation
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {bulletinActuel.notes?.map((note, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="flex items-center space-x-3">
-                              <div 
-                                className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
-                                style={{ backgroundColor: note.matiere_couleur || '#3B82F6' }}
-                              >
-                                {getInitial(note.matiere_code) || 'M'}
-                              </div>
-                              <div>
-                                <div className="font-medium text-gray-900">{note.matiere_nom}</div>
-                                <div className="text-sm text-gray-500">{note.enseignant_nom}</div>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                            {note.note_devoir1 || '-'}/20
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                            {note.note_devoir2 || '-'}/20
-                          </td><td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                            {note.note_composition || '-'}/20
-                          </td>
-                          
-                          <td className="px-6 py-4 whitespace-nowrap text-center">
-                            <Badge variant={note.moyenne >= 10 ? 'success' : 'danger'}>
-                              {note.moyenne || '-'}/20
-                            </Badge>
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
-                            {note.coefficient}
-                          </td>
-                          
-                          <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
-                            {note.appreciation || 'Aucune appréciation'}
-                          </td>
+                {bulletinActuel.notes && bulletinActuel.notes.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Matière
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            1er Devoir
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            2e Devoir
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Composition
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Moyenne
+                          </th>
+                          <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Coefficient
+                          </th>
+                          <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Appréciation
+                          </th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {bulletinActuel.notes.map((note, index) => (
+                          <tr key={index} className="hover:bg-gray-50">
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-3">
+                                <div 
+                                  className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-sm font-bold"
+                                  style={{ backgroundColor: note.matiere_couleur || '#3B82F6' }}
+                                >
+                                  {getInitial(note.matiere_code) || 'M'}
+                                </div>
+                                <div>
+                                  <div className="font-medium text-gray-900">{note.matiere_nom}</div>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                              {note.note_devoir1 !== null && note.note_devoir1 !== undefined ? `${note.note_devoir1}/20` : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                              {note.note_devoir2 !== null && note.note_devoir2 !== undefined ? `${note.note_devoir2}/20` : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                              {note.note_composition !== null && note.note_composition !== undefined ? `${note.note_composition}/20` : '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center">
+                              <Badge variant={note.moyenne >= 10 ? 'success' : 'danger'}>
+                                {note.moyenne ? `${note.moyenne}/20` : '-'}
+                              </Badge>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-center text-sm text-gray-600">
+                              {note.coefficient || '-'}
+                            </td>
+                            <td className="px-6 py-4 text-sm text-gray-600 max-w-xs">
+                              {note.appreciation || 'Aucune appréciation'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <EmptyState
+                    title="Aucune note disponible"
+                    description="Les notes pour ce trimestre ne sont pas encore saisies."
+                    icon={BookOpen}
+                  />
+                )}
               </Card>
 
               {/* Appréciations générales */}
@@ -357,9 +446,11 @@ moyenne_generale || 0;
                     <p className="text-gray-800 leading-relaxed">
                       {bulletinActuel.appreciation_generale}
                     </p>
-                    <div className="mt-4 text-sm text-gray-600">
-                      <strong>Professeur principal:</strong> {bulletinActuel.professeur_principal}
-                    </div>
+                    {bulletinActuel.professeur_principal && (
+                      <div className="mt-4 text-sm text-gray-600">
+                        <strong>Professeur principal:</strong> {bulletinActuel.professeur_principal}
+                      </div>
+                    )}
                   </div>
                 </Card>
               )}
@@ -377,7 +468,7 @@ moyenne_generale || 0;
             </>
           )}
 
-          {selectedTrimestre && !loadingBulletins && !bulletinActuel && (
+          {selectedTrimestre && !loadingBulletins && !bulletinError && !bulletinActuel && (
             <Card>
               <EmptyState
                 title="Bulletin non disponible"
@@ -399,7 +490,7 @@ moyenne_generale || 0;
         </>
       )}
 
-      {enfants.length === 0 && (
+      {enfants.length === 0 && !loading && !error && (
         <Card>
           <EmptyState
             title="Aucun enfant trouvé"

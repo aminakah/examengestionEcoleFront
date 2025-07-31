@@ -120,8 +120,6 @@ const AuthenticatedApp = () => {
                 <Route path="documents" element={<GestionDocuments />} />
                 <Route path="bulletins" element={<BulletinsAdmin />} />
                 <Route path="notes" element={<ConsultationNotes />} />
-                {/* Route de démo des améliorations de sécurité - temporairement désactivée */}
-                {/* <Route path="security-demo" element={<SecurityImprovementsDemo />} /> */}
               
               </Routes>
             </RoleProtectedRoute>
@@ -135,7 +133,6 @@ const AuthenticatedApp = () => {
             <RoleProtectedRoute allowedRoles={['enseignant']}>
               <Routes>
                 <Route path="notes" element={<GradeManager />} />
-                <Route path="saisie-notes" element={<SaisieNotes />} />
                 <Route path="saisie-notes-amelioree" element={<SaisieNotesAmelioree />} />
                 <Route path="notes-legacy" element={<SaisieNoteEnseignant />} />
                 <Route path="mes-classes" element={<div>Mes Classes</div>} />
@@ -155,6 +152,7 @@ const AuthenticatedApp = () => {
                 <Route path="bulletins" element={<BulletinsParentAmélioré />} />
                 <Route path="notes" element={<div>Notes des Enfants</div>} />
                 <Route path="rendez-vous" element={<div>Rendez-vous</div>} />
+                {/* <Route path="dashbord" element={<ParentDashboard/>} /> */}
               </Routes>
             </RoleProtectedRoute>
           } 
@@ -187,14 +185,14 @@ const AuthenticatedApp = () => {
                   </PermissionProtectedRoute>
                 } 
               />
-              <Route 
+              {/* <Route 
                 path="notes" 
                 element={
                   <PermissionProtectedRoute resource="grades" action="write">
                     <GradeManager />
                   </PermissionProtectedRoute>
                 } 
-              />
+              /> */}
             </Routes>
           } 
         />
@@ -204,11 +202,10 @@ const AuthenticatedApp = () => {
         <Route path="/enseignants" element={<Navigate to="/admin/enseignants" replace />} />
         <Route path="/classes" element={<Navigate to="/admin/classes" replace />} />
         <Route path="/matieres" element={<Navigate to="/admin/matieres" replace />} />
-        <Route path="/notes" element={<Navigate to={
-          isTeacher ? "/enseignant/notes" :
-          isAdmin ? "/gestion/notes" :
-          "/dashboard"
-        } replace />} />
+
+        
+       
+
         <Route path="/bulletins" element={<Navigate to={
           isParent ? "/parent/bulletins" :
           isStudent ? "/eleve/bulletins" :
