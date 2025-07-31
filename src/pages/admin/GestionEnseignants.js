@@ -48,7 +48,11 @@ const GestionEnseignants = () => {
         ));
       } else {
         const response = await apiService.post('/enseignants', formData);
-        setEnseignants([...enseignants, response.data]);
+        console.log(response)
+        if (response.success= true){
+        loadData()
+
+        }
       }
       closeModal();
       alert(editingEnseignant ? 'Enseignant modifié avec succès!' : 'Enseignant ajouté avec succès!');

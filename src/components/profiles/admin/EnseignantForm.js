@@ -143,14 +143,14 @@ const EnseignantForm = ({
 console.log(initialData)
   // ✅ CORRECTION: Initialisation sécurisée des données
   const [formData, setFormData] = useState({
-    nom: extractSafeValue(initialData.user?.nom, ''),
-    prenom: extractSafeValue(initialData.user?.prenom, ''),
-    email: extractSafeValue(initialData.user?.email, ''),
-    telephone: extractSafeValue(initialData.user?.telephone, ''),
-    adresse: extractSafeValue(initialData.user?.adresse, ''),
-    matiere_id: extractSafeId(initialData.matiere_id || initialData.matiere, ''),
-    specialite: extractSafeValue(initialData.specialite, ''),
-    date_embauche: extractSafeValue(initialData.created_at , '')
+    nom: extractSafeValue(initialData?.user?.nom ||''),
+    prenom: extractSafeValue(initialData?.user?.prenom, ''),
+    email: extractSafeValue(initialData?.user?.email, ''),
+    telephone: extractSafeValue(initialData?.user?.telephone, ''),
+    adresse: extractSafeValue(initialData?.user?.adresse, ''),
+    matiere_id: extractSafeId(initialData?.matiere_id || initialData?.matiere, ''),
+    specialite: extractSafeValue(initialData?.specialite, ''),
+    date_embauche: extractSafeValue(initialData?.created_at , '')
   });
 
   const [loading, setLoading] = useState(false);
